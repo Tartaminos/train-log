@@ -31,7 +31,7 @@ export class WorkoutTemplateRepositorySQLite implements WorkoutTemplateRepositor
   async createTemplate(input: CreateWorkoutTemplateInput): Promise<WorkoutTemplate> {
     await initDatabase();
 
-    const createdAt = new Date().toISOString();
+    const createdAt = input.createdAt ?? new Date().toISOString();
     const result = (await executeSql(
       'INSERT INTO workout_templates (name, notes, created_at) VALUES (?, ?, ?)',
       [input.name, input.notes ?? null, createdAt]
