@@ -69,6 +69,10 @@ export default function HomeScreen() {
     <Screen>
       <Text style={styles.screenTitle}>Minhas Fichas</Text>
 
+      <TouchableOpacity style={styles.historyButton} onPress={() => router.push('/history')}>
+        <Text style={styles.historyButtonText}>Histórico</Text>
+      </TouchableOpacity>
+
       {isLoadingTemplates ? (
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Carregando...</Text>
@@ -110,6 +114,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md
+  },
+
+  historyButton: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.card,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 10,
+    marginBottom: theme.spacing.md
+  },
+  historyButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600'
   },
   loadingContainer: {
     flex: 1,
