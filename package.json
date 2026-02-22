@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "expo": "~52.0.11",
+    "expo": "^54.0.33",
+    "expo-asset": "~11.0.5",
     "expo-router": "~4.0.9",
     "expo-sqlite": "~15.2.14",
     "expo-status-bar": "~2.0.0",
