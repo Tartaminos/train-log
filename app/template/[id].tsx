@@ -316,6 +316,13 @@ export default function EditTemplateScreen() {
 
         <View style={styles.mainActionsContainer}>
           <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => router.push(`/session/${templateId}`)}
+          >
+            <Text style={styles.primaryButtonText}>Iniciar treino</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.primaryButton, isSavingTemplate && styles.disabledButton]}
             onPress={handleSaveTemplateChanges}
             disabled={isSavingTemplate}
