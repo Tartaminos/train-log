@@ -128,16 +128,20 @@ export default function EditTemplateScreen() {
 
     try {
       setIsDeletingTemplate(true);
+      setFormErrorMessage(null);
+      setSuccessMessage(null);
+
       const deletedSuccessfully = await workoutTemplateRepository.deleteTemplate(templateId);
 
       if (deletedSuccessfully) {
         router.replace('/');
-      } else {
-        setFormErrorMessage('Não foi possível excluir a ficha.');
+        return;
       }
+
+      setFormErrorMessage('Não foi possível excluir a ficha. Tente novamente.');
     } catch (error) {
       console.error('Failed to delete template', error);
-      setFormErrorMessage('Não foi possível excluir a ficha.');
+      setFormErrorMessage('Erro ao excluir a ficha. Tente novamente em instantes.');
     } finally {
       setIsDeletingTemplate(false);
     }

@@ -5,6 +5,17 @@ const DATABASE_NAME = 'train_log.db';
 const databasePromise = SQLite.openDatabaseAsync(DATABASE_NAME);
 let initializationPromise: Promise<void> | null = null;
 
+type ForeignKeyRow = {
+  id: number;
+  seq: number;
+  table: string;
+  from: string;
+  to: string;
+  on_update: string;
+  on_delete: string;
+  match: string;
+};
+
 async function getDatabase() {
   return databasePromise;
 }
@@ -53,7 +64,7 @@ export async function initDatabase() {
             started_at TEXT NOT NULL,
             ended_at TEXT,
             notes TEXT,
-            FOREIGN KEY(workout_template_id) REFERENCES workout_templates(id)
+            FOREIGN KEY(workout_template_id) REFERENCES workout_templates(id) ON DELETE SET NULL
           );
 
           CREATE TABLE IF NOT EXISTS workout_sets (
@@ -69,6 +80,43 @@ export async function initDatabase() {
           );
         `);
       });
+
+      const workoutSessionForeignKeys = (await db.getAllAsync(
+        'PRAGMA foreign_key_list(workout_sessions)'
+      )) as ForeignKeyRow[];
+
+      const workoutTemplateForeignKey = workoutSessionForeignKeys.find(
+        (foreignKey) =>
+          foreignKey.table === 'workout_templates' &&
+          foreignKey.from === 'workout_template_id' &&
+          foreignKey.to === 'id'
+      );
+
+      if (workoutTemplateForeignKey?.on_delete?.toUpperCase() !== 'SET NULL') {
+        await db.execAsync('PRAGMA foreign_keys = OFF;');
+
+        await db.withTransactionAsync(async () => {
+          await db.execAsync(`
+            CREATE TABLE workout_sessions_new (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              workout_template_id INTEGER,
+              started_at TEXT NOT NULL,
+              ended_at TEXT,
+              notes TEXT,
+              FOREIGN KEY(workout_template_id) REFERENCES workout_templates(id) ON DELETE SET NULL
+            );
+
+            INSERT INTO workout_sessions_new (id, workout_template_id, started_at, ended_at, notes)
+            SELECT id, workout_template_id, started_at, ended_at, notes
+            FROM workout_sessions;
+
+            DROP TABLE workout_sessions;
+            ALTER TABLE workout_sessions_new RENAME TO workout_sessions;
+          `);
+        });
+
+        await db.execAsync('PRAGMA foreign_keys = ON;');
+      }
     })();
   }
 
