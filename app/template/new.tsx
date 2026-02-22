@@ -74,24 +74,26 @@ export default function NewTemplateScreen() {
         />
       </View>
 
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => router.back()}
-          disabled={isSavingTemplate}
-        >
-          <Text style={styles.secondaryButtonText}>Cancelar</Text>
-        </TouchableOpacity>
+      <View style={styles.mainActionsContainer}>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => router.back()}
+            disabled={isSavingTemplate}
+          >
+            <Text style={styles.secondaryButtonText}>Cancelar</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.primaryButton, isSavingTemplate && styles.disabledButton]}
-          onPress={handleSaveTemplate}
-          disabled={isSavingTemplate}
-        >
-          <Text style={styles.primaryButtonText}>
-            {isSavingTemplate ? 'Salvando...' : 'Salvar ficha'}
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.primaryButton, isSavingTemplate && styles.disabledButton]}
+            onPress={handleSaveTemplate}
+            disabled={isSavingTemplate}
+          >
+            <Text style={styles.primaryButtonText}>
+              {isSavingTemplate ? 'Salvando...' : 'Salvar ficha'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </Screen>
   );
@@ -130,8 +132,11 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
     fontSize: 14
   },
+  mainActionsContainer: {
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.xl
+  },
   buttonRow: {
-    marginTop: theme.spacing.md,
     flexDirection: 'row',
     gap: theme.spacing.sm
   },

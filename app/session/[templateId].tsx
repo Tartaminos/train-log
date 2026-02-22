@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -245,8 +244,7 @@ export default function WorkoutSessionScreen() {
   }
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+    <Screen isScrollable contentContainerStyle={styles.contentContainer}>
         <Text style={styles.screenTitle}>{workoutTemplate.name}</Text>
         <Text style={styles.secondaryText}>Início: {new Date(sessionStartedAt).toLocaleString()}</Text>
 
@@ -309,23 +307,23 @@ export default function WorkoutSessionScreen() {
 
         {screenErrorMessage ? <Text style={styles.errorMessage}>{screenErrorMessage}</Text> : null}
 
-        <Pressable
-          style={[styles.primaryButton, isFinishingWorkout && styles.disabledButton]}
-          onPress={handleFinishWorkout}
-          disabled={isFinishingWorkout}
-        >
-          <Text style={styles.primaryButtonText}>
-            {isFinishingWorkout ? 'Finalizando...' : 'Finalizar treino'}
-          </Text>
-        </Pressable>
-      </ScrollView>
+        <View style={styles.mainActionsContainer}>
+          <Pressable
+            style={[styles.primaryButton, isFinishingWorkout && styles.disabledButton]}
+            onPress={handleFinishWorkout}
+            disabled={isFinishingWorkout}
+          >
+            <Text style={styles.primaryButtonText}>
+              {isFinishingWorkout ? 'Finalizando...' : 'Finalizar treino'}
+            </Text>
+          </Pressable>
+        </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   contentContainer: {
-    paddingBottom: theme.spacing.lg,
     gap: theme.spacing.md
   },
   screenTitle: {
@@ -377,6 +375,10 @@ const styles = StyleSheet.create({
   setText: {
     color: theme.colors.textPrimary,
     fontSize: 14
+  },
+  mainActionsContainer: {
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.xl
   },
   primaryButton: {
     backgroundColor: theme.colors.primary,
