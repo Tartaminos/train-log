@@ -54,6 +54,17 @@ export default function HomeScreen() {
     loadTemplateList();
   }, []);
 
+  const handleOpenTemplate = (templateId: number) => {
+    router.push(`/template/${templateId}`);
+  };
+
+  const handleStartWorkoutSession = (templateId: number) => {
+    router.push({
+      pathname: '/session/[templateId]',
+      params: { templateId: String(templateId) }
+    });
+  };
+
   return (
     <Screen>
       <Text style={styles.screenTitle}>Minhas Fichas</Text>
@@ -68,16 +79,19 @@ export default function HomeScreen() {
             <Text style={styles.emptyStateText}>Nenhuma ficha cadastrada.</Text>
           ) : (
             templateList.map((template) => (
-              <TouchableOpacity
-                key={template.id}
-                onPress={() => router.push(`/template/${template.id}`)}
-                activeOpacity={0.9}
-              >
-                <Card>
+              <Card key={template.id}>
+                <TouchableOpacity onPress={() => handleOpenTemplate(template.id)} activeOpacity={0.9}>
                   <Text style={styles.templateName}>{template.name}</Text>
                   <Text style={styles.templateExerciseCount}>{template.exerciseCount} exercícios</Text>
-                </Card>
-              </TouchableOpacity>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.startWorkoutButton}
+                  onPress={() => handleStartWorkoutSession(template.id)}
+                >
+                  <Text style={styles.startWorkoutButtonText}>Iniciar treino</Text>
+                </TouchableOpacity>
+              </Card>
             ))
           )}
         </ScrollView>
@@ -122,7 +136,20 @@ const styles = StyleSheet.create({
   templateExerciseCount: {
     marginTop: theme.spacing.xs,
     fontSize: 14,
-    color: theme.colors.textSecondary
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.md
+  },
+  startWorkoutButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12
+  },
+  startWorkoutButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '600'
   },
   createButton: {
     position: 'absolute',
