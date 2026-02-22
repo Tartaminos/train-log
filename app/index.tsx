@@ -7,6 +7,8 @@ import {
   TemplateExerciseRepositorySQLite,
   WorkoutTemplateRepositorySQLite
 } from '../src/data/repositories/sqlite';
+import { Card, Screen } from '../src/ui/components/Layout';
+import { theme } from '../src/ui/theme';
 
 type TemplateListItem = {
   id: number;
@@ -53,7 +55,7 @@ export default function HomeScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <Screen>
       <Text style={styles.screenTitle}>Minhas Fichas</Text>
 
       {isLoadingTemplates ? (
@@ -68,11 +70,13 @@ export default function HomeScreen() {
             templateList.map((template) => (
               <TouchableOpacity
                 key={template.id}
-                style={styles.templateCard}
                 onPress={() => router.push(`/template/${template.id}`)}
+                activeOpacity={0.9}
               >
-                <Text style={styles.templateName}>{template.name}</Text>
-                <Text style={styles.templateExerciseCount}>{template.exerciseCount} exercícios</Text>
+                <Card>
+                  <Text style={styles.templateName}>{template.name}</Text>
+                  <Text style={styles.templateExerciseCount}>{template.exerciseCount} exercícios</Text>
+                </Card>
               </TouchableOpacity>
             ))
           )}
@@ -82,23 +86,16 @@ export default function HomeScreen() {
       <TouchableOpacity style={styles.createButton} onPress={() => router.push('/template/new')}>
         <Text style={styles.createButtonText}>Nova Ficha</Text>
       </TouchableOpacity>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 20
-  },
   screenTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#0f172a',
-    marginBottom: 16
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md
   },
   loadingContainer: {
     flex: 1,
@@ -106,48 +103,40 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   loadingText: {
-    color: '#475569',
+    color: theme.colors.textSecondary,
     fontSize: 16
   },
   listContainer: {
-    gap: 10,
+    gap: theme.spacing.sm,
     paddingBottom: 90
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#64748b'
-  },
-  templateCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0'
+    color: theme.colors.textSecondary
   },
   templateName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#0f172a'
+    color: theme.colors.textPrimary
   },
   templateExerciseCount: {
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
     fontSize: 14,
-    color: '#64748b'
+    color: theme.colors.textSecondary
   },
   createButton: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 20,
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
+    left: theme.spacing.md,
+    right: theme.spacing.md,
+    bottom: theme.spacing.md,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14
   },
   createButtonText: {
-    color: '#f8fafc',
+    color: theme.colors.textPrimary,
     fontSize: 16,
     fontWeight: '600'
   }
