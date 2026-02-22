@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -225,8 +224,7 @@ export default function EditTemplateScreen() {
   }
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+    <Screen isScrollable contentContainerStyle={styles.contentContainer}>
         <Text style={styles.screenTitle}>Editar ficha</Text>
 
         <View style={styles.sectionContainer}>
@@ -348,14 +346,13 @@ export default function EditTemplateScreen() {
             <Text style={styles.secondaryButtonText}>Voltar</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   contentContainer: {
-    paddingBottom: theme.spacing.lg
+    gap: theme.spacing.md
   },
   screenTitle: {
     fontSize: 28,
@@ -427,6 +424,8 @@ const styles = StyleSheet.create({
     fontWeight: '600'
   },
   mainActionsContainer: {
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.xl,
     gap: theme.spacing.sm
   },
   primaryButton: {
