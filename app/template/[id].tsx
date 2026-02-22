@@ -317,7 +317,9 @@ export default function EditTemplateScreen() {
         <View style={styles.mainActionsContainer}>
           <TouchableOpacity
             style={styles.primaryButton}
-            onPress={() => router.push(`/session/${templateId}`)}
+            onPress={() =>
+              router.push({ pathname: '/session/[templateId]', params: { templateId: String(templateId) } })
+            }
           >
             <Text style={styles.primaryButtonText}>Iniciar treino</Text>
           </TouchableOpacity>
