@@ -149,12 +149,7 @@ export default function WorkoutSessionSummaryScreen() {
 
       <Pressable
         style={styles.primaryButton}
-        onPress={() =>
-          router.push({
-            pathname: '/workout/[sessionId]/story',
-            params: { sessionId: String(workoutSessionSummary.sessionId) }
-          })
-        }
+        onPress={() => router.push(`/workout/${workoutSessionSummary.sessionId}/story`)}
       >
         <Text style={styles.primaryButtonText}>Gerar Story do treino</Text>
       </Pressable>

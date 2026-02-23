@@ -327,15 +327,16 @@ export default function WorkoutSessionScreen() {
       setScreenErrorMessage(null);
       setIsFinishingWorkout(true);
 
-      await workoutSessionRepository.finishSession({
+      const finishedWorkoutSession = await workoutSessionRepository.finishSession({
         id: workoutSessionId,
         endedAt: new Date().toISOString()
       });
 
-      router.replace({
-        pathname: '/workout/[sessionId]/summary',
-        params: { sessionId: String(workoutSessionId) }
-      });
+      if (!finishedWorkoutSession) {
+        throw new Error('Workout session was not found during finish flow.');
+      }
+
+      router.replace(`/workout/${finishedWorkoutSession.id}/summary`);
     } catch (error) {
       console.error('Failed to finish workout session', error);
       setScreenErrorMessage('Não foi possível finalizar o treino.');
