@@ -54,7 +54,9 @@ export function WorkoutStoryCanvas({
   healthData,
   isHealthIntegrationEnabled = false
 }: WorkoutStoryCanvasProps) {
-  const workoutInfoText = `Duração: ${summary.durationInMinutes} min • Volume: ${formatTotalVolume(summary.totalVolume)} kg • Data: ${formatWorkoutDate(summary.startedAt)}`;
+  const workoutInfoText = `Duração: ${summary.durationInMinutes} min
+  Volume: ${formatTotalVolume(summary.totalVolume)} kg
+  Data: ${formatWorkoutDate(summary.startedAt)}`;
   const shouldRenderHealthSummary = isHealthIntegrationEnabled && hasHealthData(healthData);
 
   return (
@@ -143,7 +145,7 @@ const styles = StyleSheet.create({
   },
   postWorkoutPhotoContainer: {
     width: '74%',
-    aspectRatio: 1,
+    aspectRatio: 9 / 16,
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
