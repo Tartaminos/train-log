@@ -31,6 +31,11 @@ type ExercisePerformanceRow = {
   session_started_at: string;
 };
 
+type ExerciseChartEntry = {
+  sessionDate: string;
+  load: number;
+};
+
 type ExerciseSummaryRow = {
   exercise_name: string;
   best_load: number | null;
@@ -140,6 +145,7 @@ export class WorkoutSetRepositorySQLite implements WorkoutSetRepository {
     )) as ExercisePerformanceRow[];
 
     const exerciseHistoryMap = new Map<string, ExercisePerformanceSummary['historyItemList']>();
+    const exerciseEntriesChronologicalMap = new Map<string, ExerciseChartEntry[]>();
 
     exerciseHistoryRowList.forEach((exerciseHistoryRow) => {
       const currentHistoryItemList = exerciseHistoryMap.get(exerciseHistoryRow.exercise_name) ?? [];
@@ -156,13 +162,28 @@ export class WorkoutSetRepositorySQLite implements WorkoutSetRepository {
       });
 
       exerciseHistoryMap.set(exerciseHistoryRow.exercise_name, currentHistoryItemList);
+
+      const currentEntriesChronological =
+        exerciseEntriesChronologicalMap.get(exerciseHistoryRow.exercise_name) ?? [];
+
+      currentEntriesChronological.push({
+        sessionDate: exerciseHistoryRow.session_started_at,
+        load: exerciseHistoryRow.load
+      });
+
+      exerciseEntriesChronologicalMap.set(
+        exerciseHistoryRow.exercise_name,
+        currentEntriesChronological
+      );
     });
 
     return exerciseSummaryRowList.map((exerciseSummaryRow) => ({
       exerciseName: exerciseSummaryRow.exercise_name,
       bestLoad: exerciseSummaryRow.best_load ?? 0,
       totalAccumulatedVolume: exerciseSummaryRow.total_accumulated_volume ?? 0,
-      historyItemList: exerciseHistoryMap.get(exerciseSummaryRow.exercise_name) ?? []
+      historyItemList: exerciseHistoryMap.get(exerciseSummaryRow.exercise_name) ?? [],
+      entriesChronological:
+        (exerciseEntriesChronologicalMap.get(exerciseSummaryRow.exercise_name) ?? []).slice().reverse()
     }));
   }
 
@@ -205,20 +226,28 @@ export class WorkoutSetRepositorySQLite implements WorkoutSetRepository {
 
     const exerciseSummaryRow = exerciseSummaryRowList[0];
 
+    const historyItemList = exerciseHistoryRowList.map((exerciseHistoryRow) => ({
+      workoutSetId: exerciseHistoryRow.workout_set_id,
+      workoutSessionId: exerciseHistoryRow.workout_session_id,
+      templateExerciseId: exerciseHistoryRow.template_exercise_id,
+      exerciseName: exerciseHistoryRow.exercise_name,
+      load: exerciseHistoryRow.load,
+      reps: exerciseHistoryRow.reps,
+      setIndex: exerciseHistoryRow.set_index,
+      sessionStartedAt: exerciseHistoryRow.session_started_at
+    }));
+
     return {
       exerciseName: exerciseSummaryRow.exercise_name,
       bestLoad: exerciseSummaryRow.best_load ?? 0,
       totalAccumulatedVolume: exerciseSummaryRow.total_accumulated_volume ?? 0,
-      historyItemList: exerciseHistoryRowList.map((exerciseHistoryRow) => ({
-        workoutSetId: exerciseHistoryRow.workout_set_id,
-        workoutSessionId: exerciseHistoryRow.workout_session_id,
-        templateExerciseId: exerciseHistoryRow.template_exercise_id,
-        exerciseName: exerciseHistoryRow.exercise_name,
-        load: exerciseHistoryRow.load,
-        reps: exerciseHistoryRow.reps,
-        setIndex: exerciseHistoryRow.set_index,
-        sessionStartedAt: exerciseHistoryRow.session_started_at
-      }))
+      historyItemList,
+      entriesChronological: historyItemList
+        .map((historyItem) => ({
+          sessionDate: historyItem.sessionStartedAt,
+          load: historyItem.load
+        }))
+        .reverse()
     };
   }
 }

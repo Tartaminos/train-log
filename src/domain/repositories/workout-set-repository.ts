@@ -16,6 +16,10 @@ export type ExercisePerformanceSummary = {
   bestLoad: number;
   totalAccumulatedVolume: number;
   historyItemList: ExercisePerformanceHistoryItem[];
+  entriesChronological: {
+    sessionDate: string;
+    load: number;
+  }[];
 };
 
 export interface WorkoutSetRepository {

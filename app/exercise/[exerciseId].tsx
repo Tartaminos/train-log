@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { WorkoutSetRepositorySQLite } from '../../src/data/repositories/sqlite';
 import type { ExercisePerformanceSummary } from '../../src/domain/repositories/workout-set-repository';
+import { ExerciseLoadChart } from '../../src/ui/components/ExerciseLoadChart';
 import { Card, Screen } from '../../src/ui/components/Layout';
 import { theme } from '../../src/ui/theme';
 
@@ -38,6 +39,7 @@ export default function ExercisePerformanceScreen() {
   const { exerciseId } = useLocalSearchParams<{ exerciseId: string | string[] }>();
 
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
+  const [loadingErrorMessage, setLoadingErrorMessage] = useState<string | null>(null);
   const [exercisePerformanceSummary, setExercisePerformanceSummary] =
     useState<ExercisePerformanceSummary | null>(null);
 
@@ -61,12 +63,15 @@ export default function ExercisePerformanceScreen() {
     const loadExercisePerformanceSummary = async () => {
       if (!exerciseName) {
         setExercisePerformanceSummary(null);
+        setLoadingErrorMessage(null);
         setIsLoadingSummary(false);
         return;
       }
 
       try {
         setIsLoadingSummary(true);
+        setLoadingErrorMessage(null);
+
         const loadedExercisePerformanceSummary =
           await workoutSetRepository.getExercisePerformanceSummaryByExerciseName(exerciseName);
 
@@ -78,6 +83,7 @@ export default function ExercisePerformanceScreen() {
 
         if (!isCancelled) {
           setExercisePerformanceSummary(null);
+          setLoadingErrorMessage('Não foi possível carregar os dados agora.');
         }
       } finally {
         if (!isCancelled) {
@@ -97,6 +103,17 @@ export default function ExercisePerformanceScreen() {
     return (
       <Screen>
         <Text style={styles.loadingText}>Carregando evolução...</Text>
+      </Screen>
+    );
+  }
+
+  if (loadingErrorMessage) {
+    return (
+      <Screen>
+        <Text style={styles.notFoundText}>{loadingErrorMessage}</Text>
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Text style={styles.backButtonText}>Voltar</Text>
+        </Pressable>
       </Screen>
     );
   }
@@ -127,14 +144,27 @@ export default function ExercisePerformanceScreen() {
           </Text>
         </View>
 
-        <View style={styles.historyListContainer}>
-          {exercisePerformanceSummary.historyItemList.map((historyItem) => (
-            <Card key={historyItem.workoutSetId} style={styles.historyCard}>
-              <Text style={styles.historyDate}>Sessão: {formatDateTime(historyItem.sessionStartedAt)}</Text>
-              <Text style={styles.historyMetric}>Carga: {formatLoad(historyItem.load)} kg</Text>
-              <Text style={styles.historyMetric}>Repetições: {historyItem.reps}</Text>
-            </Card>
-          ))}
+        <View style={styles.chartSectionContainer}>
+          <Text style={styles.sectionTitle}>Evolução da carga</Text>
+          <ExerciseLoadChart
+            pointList={exercisePerformanceSummary.entriesChronological.map((entryItem) => ({
+              date: entryItem.sessionDate,
+              load: entryItem.load
+            }))}
+          />
+        </View>
+
+        <View style={styles.historySectionContainer}>
+          <Text style={styles.sectionTitle}>Execuções anteriores</Text>
+          <View style={styles.historyListContainer}>
+            {exercisePerformanceSummary.historyItemList.map((historyItem) => (
+              <Card key={historyItem.workoutSetId} style={styles.historyCard}>
+                <Text style={styles.historyDate}>Sessão: {formatDateTime(historyItem.sessionStartedAt)}</Text>
+                <Text style={styles.historyMetric}>Carga: {formatLoad(historyItem.load)} kg</Text>
+                <Text style={styles.historyMetric}>Repetições: {historyItem.reps}</Text>
+              </Card>
+            ))}
+          </View>
         </View>
       </ScrollView>
     </Screen>
@@ -156,6 +186,17 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 15,
     fontWeight: '600'
+  },
+  chartSectionContainer: {
+    gap: theme.spacing.sm
+  },
+  historySectionContainer: {
+    gap: theme.spacing.sm
+  },
+  sectionTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '700'
   },
   historyListContainer: {
     gap: theme.spacing.sm
