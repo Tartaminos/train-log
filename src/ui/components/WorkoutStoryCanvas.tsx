@@ -37,8 +37,19 @@ function hasHealthData(healthData?: HealthWorkoutData | null): boolean {
 }
 
 export function WorkoutStoryCanvas({ summary, photoUri, healthData }: WorkoutStoryCanvasProps) {
-  const shouldRenderHealthSection = hasHealthData(healthData);
   const shouldRenderPostWorkoutPhoto = Boolean(photoUri);
+  const healthSummaryText = hasHealthData(healthData)
+    ? [
+        healthData?.estimatedCalories !== undefined
+          ? `Calorias: ${healthData.estimatedCalories} kcal`
+          : null,
+        healthData?.averageHeartRate !== undefined || healthData?.maxHeartRate !== undefined
+          ? `FC méd/máx: ${healthData?.averageHeartRate ?? '-'} / ${healthData?.maxHeartRate ?? '-'} bpm`
+          : null
+      ]
+        .filter(Boolean)
+        .join(' • ')
+    : 'Sem dados de saúde para esta sessão';
 
   return (
     <View style={styles.canvasContainer}>
@@ -47,42 +58,35 @@ export function WorkoutStoryCanvas({ summary, photoUri, healthData }: WorkoutSto
         <Text style={styles.brandSubtitle}>Treino registrado. Evolução constante.</Text>
       </View>
 
-      <View style={[styles.contentContainer, !shouldRenderPostWorkoutPhoto && styles.contentContainerWithoutPhoto]}>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Duração</Text>
-          <Text style={styles.metricValue}>{summary.durationInMinutes} min</Text>
-        </View>
+      <View style={styles.mainSectionContainer}>
+        <View style={styles.metricsGrid}>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Duração</Text>
+            <Text style={styles.metricValue}>{summary.durationInMinutes} min</Text>
+          </View>
 
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Volume total</Text>
-          <Text style={styles.metricValue}>{formatTotalVolume(summary.totalVolume)} kg</Text>
-        </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Volume</Text>
+            <Text style={styles.metricValue}>{formatTotalVolume(summary.totalVolume)} kg</Text>
+          </View>
 
-        <View style={styles.metricCard}>
-          <Text style={styles.metricLabel}>Data</Text>
-          <Text style={styles.metricValue}>{formatWorkoutDate(summary.startedAt)}</Text>
-        </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Data</Text>
+            <Text style={styles.metricValue}>{formatWorkoutDate(summary.startedAt)}</Text>
+          </View>
 
-        {shouldRenderHealthSection && (
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>Saúde</Text>
-            {healthData?.estimatedCalories !== undefined && (
-              <Text style={styles.healthDataValue}>Calorias estimadas: {healthData.estimatedCalories} kcal</Text>
-            )}
-            {(healthData?.averageHeartRate !== undefined || healthData?.maxHeartRate !== undefined) && (
-              <Text style={styles.healthDataValue}>
-                FC média/máxima: {healthData?.averageHeartRate ?? '-'} / {healthData?.maxHeartRate ?? '-'} bpm
-              </Text>
-            )}
+            <Text style={styles.healthDataValue}>{healthSummaryText}</Text>
+          </View>
+        </View>
+
+        {shouldRenderPostWorkoutPhoto && (
+          <View style={styles.photoContainer}>
+            <Image source={{ uri: photoUri }} resizeMode="cover" style={styles.photoImage} />
           </View>
         )}
       </View>
-
-      {shouldRenderPostWorkoutPhoto && (
-        <View style={styles.photoContainer}>
-          <Image source={{ uri: photoUri }} resizeMode="cover" style={styles.photoImage} />
-        </View>
-      )}
     </View>
   );
 }
@@ -90,21 +94,21 @@ export function WorkoutStoryCanvas({ summary, photoUri, healthData }: WorkoutSto
 const styles = StyleSheet.create({
   canvasContainer: {
     width: '100%',
-    aspectRatio: 9 / 16,
+    height: '100%',
     backgroundColor: theme.colors.background,
     borderRadius: theme.radius.lg,
     borderWidth: 1,
     borderColor: theme.colors.border,
     padding: theme.spacing.lg,
-    justifyContent: 'space-between',
-    gap: theme.spacing.lg
+    gap: theme.spacing.lg,
+    overflow: 'hidden'
   },
   headerContainer: {
     gap: theme.spacing.xs
   },
   brandTitle: {
     color: theme.colors.primary,
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '800',
     letterSpacing: 1.2
   },
@@ -113,19 +117,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500'
   },
-  contentContainer: {
+  mainSectionContainer: {
+    flex: 1,
     gap: theme.spacing.md
   },
-  contentContainerWithoutPhoto: {
+  metricsGrid: {
     flex: 1,
-    justifyContent: 'center'
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.md
   },
   metricCard: {
+    width: '47%',
+    minHeight: 120,
+    flexGrow: 1,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     padding: theme.spacing.md,
+    justifyContent: 'space-between',
     gap: theme.spacing.xs
   },
   metricLabel: {
@@ -135,16 +146,18 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     color: theme.colors.textPrimary,
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700'
   },
   healthDataValue: {
     color: theme.colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '600'
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20
   },
   photoContainer: {
-    height: 190,
+    flex: 0.45,
+    minHeight: 180,
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.border,

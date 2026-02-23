@@ -260,7 +260,10 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md
   },
   storyWrapper: {
-    width: '100%'
+    width: '100%',
+    aspectRatio: 9 / 16,
+    alignSelf: 'center',
+    overflow: 'hidden'
   },
   shareButton: {
     marginTop: 'auto',
