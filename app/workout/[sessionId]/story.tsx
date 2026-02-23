@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Camera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
@@ -89,8 +90,14 @@ export default function WorkoutStoryScreen() {
     try {
       setIsCapturingPhoto(true);
 
-      const { status: permissionStatus } = await ImagePicker.requestCameraPermissionsAsync();
-      if (permissionStatus !== 'granted') {
+      const currentCameraPermission = await Camera.getCameraPermissionsAsync();
+      let resolvedCameraPermission = currentCameraPermission;
+
+      if (!currentCameraPermission.granted) {
+        resolvedCameraPermission = await Camera.requestCameraPermissionsAsync();
+      }
+
+      if (!resolvedCameraPermission.granted) {
         Alert.alert('Permissão necessária', 'Permita o acesso à câmera para tirar sua foto pós-treino.');
         return;
       }
