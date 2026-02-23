@@ -171,19 +171,29 @@ export default function WorkoutHistoryDetailScreen() {
 
         <View style={styles.exerciseListContainer}>
           {groupedExerciseList.map((exerciseGroup) => (
-            <Card key={exerciseGroup.exerciseName} style={styles.exerciseCard}>
-              <Text style={styles.exerciseName}>{exerciseGroup.exerciseName}</Text>
+            <Pressable
+              key={exerciseGroup.exerciseName}
+              onPress={() =>
+                router.push({
+                  pathname: '/exercise/[exerciseId]',
+                  params: { exerciseId: encodeURIComponent(exerciseGroup.exerciseName) }
+                })
+              }
+            >
+              <Card style={styles.exerciseCard}>
+                <Text style={styles.exerciseName}>{exerciseGroup.exerciseName}</Text>
 
-              {exerciseGroup.setList.length === 0 ? (
-                <Text style={styles.emptySetText}>Nenhuma série registrada</Text>
-              ) : (
-                exerciseGroup.setList.map((workoutSet) => (
-                  <Text key={workoutSet.id} style={styles.setText}>
-                    Série {workoutSet.setIndex} — {formatLoad(workoutSet.load)} kg x {workoutSet.reps}
-                  </Text>
-                ))
-              )}
-            </Card>
+                {exerciseGroup.setList.length === 0 ? (
+                  <Text style={styles.emptySetText}>Nenhuma série registrada</Text>
+                ) : (
+                  exerciseGroup.setList.map((workoutSet) => (
+                    <Text key={workoutSet.id} style={styles.setText}>
+                      Série {workoutSet.setIndex} — {formatLoad(workoutSet.load)} kg x {workoutSet.reps}
+                    </Text>
+                  ))
+                )}
+              </Card>
+            </Pressable>
           ))}
 
           {groupedExerciseList.length === 0 ? (
