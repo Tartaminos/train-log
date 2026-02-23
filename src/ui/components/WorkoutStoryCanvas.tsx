@@ -38,6 +38,7 @@ function hasHealthData(healthData?: HealthWorkoutData | null): boolean {
 
 export function WorkoutStoryCanvas({ summary, photoUri, healthData }: WorkoutStoryCanvasProps) {
   const shouldRenderHealthSection = hasHealthData(healthData);
+  const shouldRenderPostWorkoutPhoto = Boolean(photoUri);
 
   return (
     <View style={styles.canvasContainer}>
@@ -46,7 +47,7 @@ export function WorkoutStoryCanvas({ summary, photoUri, healthData }: WorkoutSto
         <Text style={styles.brandSubtitle}>Treino registrado. Evolução constante.</Text>
       </View>
 
-      <View style={styles.contentContainer}>
+      <View style={[styles.contentContainer, !shouldRenderPostWorkoutPhoto && styles.contentContainerWithoutPhoto]}>
         <View style={styles.metricCard}>
           <Text style={styles.metricLabel}>Duração</Text>
           <Text style={styles.metricValue}>{summary.durationInMinutes} min</Text>
@@ -77,13 +78,11 @@ export function WorkoutStoryCanvas({ summary, photoUri, healthData }: WorkoutSto
         )}
       </View>
 
-      <View style={styles.photoContainer}>
-        {photoUri ? (
+      {shouldRenderPostWorkoutPhoto && (
+        <View style={styles.photoContainer}>
           <Image source={{ uri: photoUri }} resizeMode="cover" style={styles.photoImage} />
-        ) : (
-          <Text style={styles.photoPlaceholderText}>Foto pós-treino aqui</Text>
-        )}
-      </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -117,6 +116,10 @@ const styles = StyleSheet.create({
   contentContainer: {
     gap: theme.spacing.md
   },
+  contentContainerWithoutPhoto: {
+    flex: 1,
+    justifyContent: 'center'
+  },
   metricCard: {
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
@@ -144,20 +147,12 @@ const styles = StyleSheet.create({
     height: 190,
     borderRadius: theme.radius.md,
     borderWidth: 1,
-    borderColor: theme.colors.primary,
-    borderStyle: 'dashed',
+    borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
     overflow: 'hidden'
   },
   photoImage: {
     width: '100%',
     height: '100%'
-  },
-  photoPlaceholderText: {
-    color: theme.colors.textSecondary,
-    fontSize: 15,
-    fontWeight: '600'
   }
 });

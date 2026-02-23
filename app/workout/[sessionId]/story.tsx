@@ -22,7 +22,7 @@ export default function WorkoutStoryScreen() {
 
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   const [isSharingStory, setIsSharingStory] = useState(false);
-  const [isPickingPhoto, setIsPickingPhoto] = useState(false);
+  const [isCapturingPhoto, setIsCapturingPhoto] = useState(false);
   const [workoutSessionSummary, setWorkoutSessionSummary] = useState<WorkoutSessionSummary | null>(null);
   const [healthWorkoutData, setHealthWorkoutData] = useState<HealthWorkoutData | null>(null);
   const [postWorkoutPhotoUri, setPostWorkoutPhotoUri] = useState<string | undefined>(undefined);
@@ -75,31 +75,31 @@ export default function WorkoutStoryScreen() {
     };
   }, [parsedSessionId]);
 
-  const handleSelectPostWorkoutPhoto = useCallback(async () => {
+  const handleCapturePostWorkoutPhoto = useCallback(async () => {
     try {
-      setIsPickingPhoto(true);
+      setIsCapturingPhoto(true);
 
-      const { status: permissionStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status: permissionStatus } = await ImagePicker.requestCameraPermissionsAsync();
       if (permissionStatus !== 'granted') {
-        Alert.alert('Permissão necessária', 'Permita o acesso à galeria para selecionar sua foto pós-treino.');
+        Alert.alert('Permissão necessária', 'Permita o acesso à câmera para tirar sua foto pós-treino.');
         return;
       }
 
-      const selectedImage = await ImagePicker.launchImageLibraryAsync({
+      const capturedImage = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 1,
         allowsEditing: true,
         aspect: [9, 16]
       });
 
-      if (!selectedImage.canceled && selectedImage.assets.length > 0) {
-        setPostWorkoutPhotoUri(selectedImage.assets[0].uri);
+      if (!capturedImage.canceled && capturedImage.assets.length > 0) {
+        setPostWorkoutPhotoUri(capturedImage.assets[0].uri);
       }
     } catch (error) {
-      console.error('Failed to pick post workout photo', error);
-      Alert.alert('Erro ao selecionar foto', 'Não foi possível selecionar a foto agora. Tente novamente.');
+      console.error('Failed to capture post workout photo', error);
+      Alert.alert('Erro ao tirar foto', 'Não foi possível tirar a foto agora. Tente novamente.');
     } finally {
-      setIsPickingPhoto(false);
+      setIsCapturingPhoto(false);
     }
   }, []);
 
@@ -166,12 +166,12 @@ export default function WorkoutStoryScreen() {
       </ViewShot>
 
       <Pressable
-        style={[styles.secondaryButton, isPickingPhoto && styles.buttonDisabled]}
-        onPress={handleSelectPostWorkoutPhoto}
-        disabled={isPickingPhoto}
+        style={[styles.secondaryButton, isCapturingPhoto && styles.buttonDisabled]}
+        onPress={handleCapturePostWorkoutPhoto}
+        disabled={isCapturingPhoto}
       >
         <Text style={styles.secondaryButtonText}>
-          {isPickingPhoto ? 'Abrindo galeria...' : 'Selecionar foto pós-treino'}
+          {isCapturingPhoto ? 'Abrindo câmera...' : 'Tirar foto pós-treino'}
         </Text>
       </Pressable>
 
