@@ -7,8 +7,6 @@ export async function syncAndroidNavigationBarDynamicMode() {
   }
 
   try {
-    await NavigationBar.setPositionAsync('absolute');
-    await NavigationBar.setBehaviorAsync('inset-swipe');
     await NavigationBar.setVisibilityAsync('hidden');
   } catch (error) {
     console.error('Failed to apply Android navigation bar dynamic mode', error);
