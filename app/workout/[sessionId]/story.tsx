@@ -89,12 +89,6 @@ export default function WorkoutStoryScreen() {
     try {
       setIsCapturingPhoto(true);
 
-      const { status: permissionStatus } = await ImagePicker.requestCameraPermissionsAsync();
-      if (permissionStatus !== 'granted') {
-        Alert.alert('Permissão necessária', 'Permita o acesso à câmera para tirar sua foto pós-treino.');
-        return;
-      }
-
       const capturedImage = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 1,
@@ -107,7 +101,7 @@ export default function WorkoutStoryScreen() {
       }
     } catch (error) {
       console.error('Failed to capture post workout photo', error);
-      Alert.alert('Erro ao tirar foto', 'Não foi possível tirar a foto agora. Tente novamente.');
+      Alert.alert('Permissão necessária', 'Permita o acesso à câmera para tirar sua foto pós-treino.');
     } finally {
       setIsCapturingPhoto(false);
     }
