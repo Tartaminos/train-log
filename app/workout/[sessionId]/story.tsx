@@ -3,6 +3,7 @@ import { Alert, Pressable, StyleSheet, Text } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Camera } from 'expo-camera';
+import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
@@ -34,9 +35,14 @@ export default function WorkoutStoryScreen() {
   const [healthWorkoutData, setHealthWorkoutData] = useState<HealthWorkoutData | null>(null);
   const [isHealthIntegrationEnabled, setIsHealthIntegrationEnabled] = useState(false);
   const [postWorkoutPhotoUri, setPostWorkoutPhotoUri] = useState<string | undefined>(undefined);
-  const [mediaLibraryPermissionResponse, requestMediaLibraryPermission] = MediaLibrary.usePermissions({
-    granularPermissions: ['photo']
-  });
+
+  const mediaLibraryAccessMessage = useMemo(() => {
+    if (Constants.appOwnership === 'expo') {
+      return 'No Expo Go, o acesso completo à biblioteca é limitado. Use um dev build para testar salvar na galeria.';
+    }
+
+    return 'Não foi possível acessar a galeria. Verifique as permissões do aplicativo e tente novamente.';
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -115,7 +121,7 @@ export default function WorkoutStoryScreen() {
       }
 
       const capturedImage = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         quality: 1,
         allowsEditing: true,
         aspect: [1, 1]
@@ -186,19 +192,28 @@ export default function WorkoutStoryScreen() {
       setIsSavingStory(true);
       setStoryActionFeedback(null);
 
-      let resolvedPermissionResponse = mediaLibraryPermissionResponse;
-      if (!resolvedPermissionResponse || resolvedPermissionResponse.status !== MediaLibrary.PermissionStatus.GRANTED) {
+      let mediaLibraryPermissionGranted = false;
+
+      try {
+        const currentMediaLibraryPermission = await MediaLibrary.getPermissionsAsync(false, ['photo']);
+        mediaLibraryPermissionGranted =
+          currentMediaLibraryPermission.status === MediaLibrary.PermissionStatus.GRANTED;
+      } catch (permissionError) {
+        console.error('Failed to get media library permission', permissionError);
+      }
+
+      if (!mediaLibraryPermissionGranted) {
         try {
-          resolvedPermissionResponse = await requestMediaLibraryPermission();
+          const requestedMediaLibraryPermission = await MediaLibrary.requestPermissionsAsync(false, ['photo']);
+          mediaLibraryPermissionGranted =
+            requestedMediaLibraryPermission.status === MediaLibrary.PermissionStatus.GRANTED;
         } catch (permissionError) {
           console.error('Failed to request media library permission', permissionError);
-          setStoryActionFeedback('Permissão de acesso à galeria negada.');
-          return;
         }
       }
 
-      if (!resolvedPermissionResponse || resolvedPermissionResponse.status !== MediaLibrary.PermissionStatus.GRANTED) {
-        setStoryActionFeedback('Permissão de acesso à galeria negada.');
+      if (!mediaLibraryPermissionGranted) {
+        setStoryActionFeedback(mediaLibraryAccessMessage);
         return;
       }
 
@@ -216,7 +231,7 @@ export default function WorkoutStoryScreen() {
     } finally {
       setIsSavingStory(false);
     }
-  }, [captureStoryImage, mediaLibraryPermissionResponse, requestMediaLibraryPermission, workoutSessionSummary]);
+  }, [captureStoryImage, mediaLibraryAccessMessage, workoutSessionSummary]);
 
   const handleBackToHome = useCallback(() => {
     router.push('/');
