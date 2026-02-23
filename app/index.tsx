@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: theme.spacing.md,
     right: theme.spacing.md,
-    bottom: theme.spacing.md,
+    bottom: theme.spacing.md + 40,
     backgroundColor: theme.colors.primary,
     borderRadius: theme.radius.md,
     alignItems: 'center',
