@@ -332,7 +332,10 @@ export default function WorkoutSessionScreen() {
         endedAt: new Date().toISOString()
       });
 
-      router.replace('/');
+      router.replace({
+        pathname: '/workout/[sessionId]/summary',
+        params: { sessionId: String(workoutSessionId) }
+      });
     } catch (error) {
       console.error('Failed to finish workout session', error);
       setScreenErrorMessage('Não foi possível finalizar o treino.');
