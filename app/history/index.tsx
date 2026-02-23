@@ -29,6 +29,11 @@ type TemplateFilterOption = {
   name: string;
 };
 
+type WorkoutVolumePoint = {
+  date: string;
+  totalVolume: number;
+};
+
 const workoutSessionRepository = new WorkoutSessionRepositorySQLite();
 const workoutSetRepository = new WorkoutSetRepositorySQLite();
 const workoutTemplateRepository = new WorkoutTemplateRepositorySQLite();
@@ -56,6 +61,7 @@ export default function WorkoutHistoryScreen() {
   const [historySessionList, setHistorySessionList] = useState<HistorySessionListItem[]>([]);
   const [templateFilterOptionList, setTemplateFilterOptionList] = useState<TemplateFilterOption[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | 'all'>('all');
+  const [workoutVolumePointList, setWorkoutVolumePointList] = useState<WorkoutVolumePoint[]>([]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -129,6 +135,52 @@ export default function WorkoutHistoryScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadWorkoutVolumePointList = async () => {
+      if (selectedTemplateId === 'all') {
+        setWorkoutVolumePointList([]);
+        return;
+      }
+
+      try {
+        const selectedTemplateSessionList = await workoutSessionRepository.getRecentSessions(50, selectedTemplateId);
+
+        const chartPointList = await Promise.all(
+          selectedTemplateSessionList.map(async (selectedTemplateSession) => {
+            const totalSessionVolume = await workoutSetRepository.getTotalVolumeBySessionId(selectedTemplateSession.id);
+
+            return {
+              date: selectedTemplateSession.startedAt,
+              totalVolume: totalSessionVolume
+            };
+          })
+        );
+
+        chartPointList.sort(
+          (firstPoint, secondPoint) => new Date(firstPoint.date).getTime() - new Date(secondPoint.date).getTime()
+        );
+
+        if (!isCancelled) {
+          setWorkoutVolumePointList(chartPointList);
+        }
+      } catch (error) {
+        console.error('Failed to load workout volume chart data', error);
+
+        if (!isCancelled) {
+          setWorkoutVolumePointList([]);
+        }
+      }
+    };
+
+    loadWorkoutVolumePointList();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedTemplateId]);
+
   const emptyStateText = useMemo(() => {
     if (isLoadingHistory) {
       return 'Carregando histórico...';
@@ -147,19 +199,17 @@ export default function WorkoutHistoryScreen() {
     );
   }, [historySessionList, selectedTemplateId]);
 
-  const workoutVolumePointList = useMemo(
-    () =>
-      [...filteredHistorySessionList]
-        .sort(
-          (firstSession, secondSession) =>
-            new Date(firstSession.startedAt).getTime() - new Date(secondSession.startedAt).getTime()
-        )
-        .map((historySessionItem) => ({
-          date: historySessionItem.startedAt,
-          totalVolume: historySessionItem.totalVolume
-        })),
-    [filteredHistorySessionList]
-  );
+  const selectedTemplateName = useMemo(() => {
+    if (selectedTemplateId === 'all') {
+      return null;
+    }
+
+    const selectedTemplateOption = templateFilterOptionList.find(
+      (templateFilterOption) => templateFilterOption.id === selectedTemplateId
+    );
+
+    return selectedTemplateOption?.name ?? 'Treino selecionado';
+  }, [selectedTemplateId, templateFilterOptionList]);
 
   return (
     <Screen>
@@ -224,10 +274,12 @@ export default function WorkoutHistoryScreen() {
         contentContainerStyle={styles.historyListContainer}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <View style={styles.chartSectionContainer}>
-            <Text style={styles.chartSectionTitle}>Evolução do volume total (kg)</Text>
-            <WorkoutVolumeChart pointList={workoutVolumePointList} />
-          </View>
+          selectedTemplateId === 'all' ? null : (
+            <View style={styles.chartSectionContainer}>
+              <Text style={styles.chartSectionTitle}>Evolução de volume — {selectedTemplateName}</Text>
+              <WorkoutVolumeChart pointList={workoutVolumePointList} />
+            </View>
+          )
         }
         ListEmptyComponent={<Text style={styles.emptyStateText}>{emptyStateText}</Text>}
         renderItem={({ item: historySession }) => (
