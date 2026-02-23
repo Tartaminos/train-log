@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
 
@@ -19,10 +20,13 @@ const healthDataService = new MockHealthDataService();
 export default function WorkoutStoryScreen() {
   const viewShotRef = useRef<ViewShot | null>(null);
   const { sessionId } = useLocalSearchParams<{ sessionId: string | string[] }>();
+  const router = useRouter();
 
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   const [isSharingStory, setIsSharingStory] = useState(false);
+  const [isSavingStory, setIsSavingStory] = useState(false);
   const [isCapturingPhoto, setIsCapturingPhoto] = useState(false);
+  const [storyActionFeedback, setStoryActionFeedback] = useState<string | null>(null);
   const [workoutSessionSummary, setWorkoutSessionSummary] = useState<WorkoutSessionSummary | null>(null);
   const [healthWorkoutData, setHealthWorkoutData] = useState<HealthWorkoutData | null>(null);
   const [postWorkoutPhotoUri, setPostWorkoutPhotoUri] = useState<string | undefined>(undefined);
@@ -103,8 +107,21 @@ export default function WorkoutStoryScreen() {
     }
   }, []);
 
-  const handleShareStory = useCallback(async () => {
+  const captureStoryImage = useCallback(async () => {
     if (!viewShotRef.current || !workoutSessionSummary) {
+      return null;
+    }
+
+    const generatedImageUri = await viewShotRef.current.capture?.();
+    if (!generatedImageUri) {
+      throw new Error('Story image capture failed');
+    }
+
+    return generatedImageUri;
+  }, [workoutSessionSummary]);
+
+  const handleShareStory = useCallback(async () => {
+    if (!workoutSessionSummary) {
       return;
     }
 
@@ -117,7 +134,7 @@ export default function WorkoutStoryScreen() {
         return;
       }
 
-      const generatedImageUri = await viewShotRef.current.capture?.();
+      const generatedImageUri = await captureStoryImage();
       if (!generatedImageUri) {
         Alert.alert('Erro ao gerar story', 'Não foi possível gerar a imagem do story.');
         return;
@@ -133,7 +150,44 @@ export default function WorkoutStoryScreen() {
     } finally {
       setIsSharingStory(false);
     }
-  }, [workoutSessionSummary]);
+  }, [captureStoryImage, workoutSessionSummary]);
+
+  const handleSaveStoryToGallery = useCallback(async () => {
+    if (!workoutSessionSummary) {
+      return;
+    }
+
+    try {
+      setIsSavingStory(true);
+      setStoryActionFeedback(null);
+
+      const { status: permissionStatus } = await MediaLibrary.requestPermissionsAsync();
+      if (permissionStatus !== 'granted') {
+        Alert.alert('Permissão necessária', 'Permita o acesso às fotos para salvar seu story na galeria.');
+        setStoryActionFeedback('Permissão para salvar negada.');
+        return;
+      }
+
+      const generatedImageUri = await captureStoryImage();
+      if (!generatedImageUri) {
+        setStoryActionFeedback('Não foi possível gerar a imagem do story.');
+        return;
+      }
+
+      await MediaLibrary.saveToLibraryAsync(generatedImageUri);
+      setStoryActionFeedback('Story salvo na galeria com sucesso.');
+    } catch (error) {
+      console.error('Failed to save story to gallery', error);
+      Alert.alert('Erro ao salvar', 'Não foi possível salvar o story na galeria agora. Tente novamente.');
+      setStoryActionFeedback('Erro ao salvar story na galeria.');
+    } finally {
+      setIsSavingStory(false);
+    }
+  }, [captureStoryImage, workoutSessionSummary]);
+
+  const handleBackToHome = useCallback(() => {
+    router.push('/');
+  }, [router]);
 
   if (isLoadingSummary) {
     return (
@@ -182,6 +236,20 @@ export default function WorkoutStoryScreen() {
       >
         <Text style={styles.shareButtonText}>{isSharingStory ? 'Gerando imagem...' : 'Compartilhar Story'}</Text>
       </Pressable>
+
+      <Pressable
+        style={[styles.secondaryButton, isSavingStory && styles.buttonDisabled]}
+        onPress={handleSaveStoryToGallery}
+        disabled={isSavingStory}
+      >
+        <Text style={styles.secondaryButtonText}>{isSavingStory ? 'Salvando story...' : 'Salvar na galeria'}</Text>
+      </Pressable>
+
+      {storyActionFeedback ? <Text style={styles.storyActionFeedbackText}>{storyActionFeedback}</Text> : null}
+
+      <Pressable style={styles.tertiaryButton} onPress={handleBackToHome}>
+        <Text style={styles.tertiaryButtonText}>Voltar para início</Text>
+      </Pressable>
     </Screen>
   );
 }
@@ -213,6 +281,16 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.surface
   },
+  tertiaryButton: {
+    borderRadius: theme.radius.md,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.background
+  },
   buttonDisabled: {
     opacity: 0.8
   },
@@ -225,6 +303,16 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontSize: 16,
     fontWeight: '700'
+  },
+  tertiaryButtonText: {
+    color: theme.colors.textSecondary,
+    fontSize: 15,
+    fontWeight: '600'
+  },
+  storyActionFeedbackText: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    textAlign: 'center'
   },
   centeredScreen: {
     alignItems: 'center',
