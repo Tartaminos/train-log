@@ -7,6 +7,7 @@ import {
   View
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 
 import {
   TemplateExerciseRepositorySQLite,
@@ -338,19 +339,25 @@ export default function EditTemplateScreen() {
                 </View>
                 <View style={styles.exerciseActionsContainer}>
                   <TouchableOpacity
-                    style={styles.reorderExerciseButton}
+                    style={styles.moveUpExerciseButton}
                     onPress={() => handleMoveExercise(exerciseIndex, 'up')}
                     disabled={exerciseIndex === 0}
                   >
-                    <Text style={styles.reorderExerciseButtonText}>Subir</Text>
+                    <View style={styles.exerciseActionContent}>
+                      <Feather name="arrow-up" size={14} color="#FFFFFF" />
+                      <Text style={styles.moveUpExerciseButtonText}>Subir</Text>
+                    </View>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={styles.reorderExerciseButton}
+                    style={styles.moveDownExerciseButton}
                     onPress={() => handleMoveExercise(exerciseIndex, 'down')}
                     disabled={exerciseIndex === templateExercises.length - 1}
                   >
-                    <Text style={styles.reorderExerciseButtonText}>Descer</Text>
+                    <View style={styles.exerciseActionContent}>
+                      <Feather name="arrow-down" size={14} color="#1A1D23" />
+                      <Text style={styles.moveDownExerciseButtonText}>Descer</Text>
+                    </View>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -358,9 +365,12 @@ export default function EditTemplateScreen() {
                     onPress={() => handleRemoveExercise(templateExercise)}
                     disabled={removingExerciseId === templateExercise.id}
                   >
-                    <Text style={styles.removeExerciseButtonText}>
-                      {removingExerciseId === templateExercise.id ? 'Removendo...' : 'Remover'}
-                    </Text>
+                    <View style={styles.exerciseActionContent}>
+                      <Feather name="trash-2" size={14} color="#FFFFFF" />
+                      <Text style={styles.removeExerciseButtonText}>
+                        {removingExerciseId === templateExercise.id ? 'Removendo...' : 'Remover'}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -504,27 +514,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: theme.spacing.sm
   },
-  reorderExerciseButton: {
-    backgroundColor: theme.colors.card,
+  exerciseActionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs
+  },
+  moveUpExerciseButton: {
+    backgroundColor: theme.colors.primaryLight,
     borderRadius: theme.radius.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm
   },
-  reorderExerciseButtonText: {
-    color: theme.colors.textPrimary,
+  moveUpExerciseButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  moveDownExerciseButton: {
+    backgroundColor: '#F2C94C',
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm
+  },
+  moveDownExerciseButtonText: {
+    color: '#1A1D23',
     fontSize: 14,
     fontWeight: '600'
   },
   removeExerciseButton: {
-    backgroundColor: theme.colors.error,
+    backgroundColor: '#EB5757',
     borderRadius: theme.radius.sm,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm
   },
   removeExerciseButtonText: {
-    color: theme.colors.textPrimary,
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600'
   },
