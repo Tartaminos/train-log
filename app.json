@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Iron Track",
-    "slug": "iron-track",
+    "name": "Iron Record",
+    "slug": "train-log",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
