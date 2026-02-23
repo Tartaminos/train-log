@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import {
@@ -8,6 +9,7 @@ import {
 } from '../../../src/data/repositories/sqlite';
 import type { WorkoutSessionSummary } from '../../../src/domain/entities';
 import { Card, Screen } from '../../../src/ui/components/Layout';
+import { syncAndroidNavigationBarDynamicMode } from '../../../src/ui/system-ui/androidNavigationBar';
 import { theme } from '../../../src/ui/theme';
 
 const workoutSessionRepository = new WorkoutSessionRepositorySQLite();
@@ -27,6 +29,14 @@ export default function WorkoutSessionSummaryScreen() {
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   const [workoutTemplateName, setWorkoutTemplateName] = useState<string | null>(null);
   const [workoutSessionSummary, setWorkoutSessionSummary] = useState<WorkoutSessionSummary | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      syncAndroidNavigationBarDynamicMode();
+
+      return undefined;
+    }, [])
+  );
 
   const parsedSessionId = useMemo(() => {
     const sessionIdParam = Array.isArray(sessionId) ? sessionId[0] : sessionId;
