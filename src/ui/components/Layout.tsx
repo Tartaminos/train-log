@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from 'react';
 import { ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '../theme';
 
@@ -16,16 +17,22 @@ type CardProps = PropsWithChildren<{
 export function Screen({ children, style, isScrollable = false, contentContainerStyle }: ScreenProps) {
   if (isScrollable) {
     return (
-      <ScrollView
-        style={[styles.scrollableScreen, style]}
-        contentContainerStyle={[styles.scrollableContentContainer, contentContainerStyle]}
-      >
-        {children}
-      </ScrollView>
+      <SafeAreaView edges={["top", "bottom"]} style={styles.safeAreaContainer}>
+        <ScrollView
+          style={[styles.scrollableScreen, style]}
+          contentContainerStyle={[styles.scrollableContentContainer, contentContainerStyle]}
+        >
+          {children}
+        </ScrollView>
+      </SafeAreaView>
     );
   }
 
-  return <View style={[styles.screenContainer, style]}>{children}</View>;
+  return (
+    <SafeAreaView edges={["top", "bottom"]} style={styles.safeAreaContainer}>
+      <View style={[styles.screenContainer, style]}>{children}</View>
+    </SafeAreaView>
+  );
 }
 
 export function Card({ children, style }: CardProps) {
@@ -33,11 +40,15 @@ export function Card({ children, style }: CardProps) {
 }
 
 const styles = StyleSheet.create({
+  safeAreaContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background
+  },
   screenContainer: {
     flex: 1,
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.md,
-    paddingTop: 60,
+    paddingTop: theme.spacing.lg,
     paddingBottom: theme.spacing.xl
   },
   scrollableScreen: {
@@ -46,7 +57,7 @@ const styles = StyleSheet.create({
   },
   scrollableContentContainer: {
     paddingHorizontal: theme.spacing.md,
-    paddingTop: 60,
+    paddingTop: theme.spacing.lg,
     paddingBottom: theme.spacing.xl
   },
   cardContainer: {
