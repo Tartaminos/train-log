@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -15,6 +15,7 @@ import {
   WorkoutTemplateRepositorySQLite
 } from '../../src/data/repositories/sqlite';
 import type { TemplateExercise, WorkoutSet, WorkoutTemplate } from '../../src/domain/entities';
+import { calculateExerciseVolumeTotal } from '../../src/domain/services/calculate-exercise-volume-total';
 import { Screen } from '../../src/ui/components/Layout';
 import { theme } from '../../src/ui/theme';
 
@@ -32,6 +33,7 @@ type ExerciseSetMap = Record<number, WorkoutSet[]>;
 type ExerciseInputMap = Record<number, ExerciseInputState>;
 type ExerciseLoadingMap = Record<number, boolean>;
 type ExerciseSuccessMessageMap = Record<number, string | null>;
+type ExerciseCompletionMap = Record<number, boolean>;
 
 function groupSetsByTemplateExercise(workoutSetList: WorkoutSet[]): ExerciseSetMap {
   return workoutSetList.reduce<ExerciseSetMap>((currentMap, workoutSet) => {
@@ -67,6 +69,7 @@ export default function WorkoutSessionScreen() {
   const [exerciseLoadingMap, setExerciseLoadingMap] = useState<ExerciseLoadingMap>({});
   const [exerciseSuccessMessageMap, setExerciseSuccessMessageMap] =
     useState<ExerciseSuccessMessageMap>({});
+  const [exerciseCompletionMap, setExerciseCompletionMap] = useState<ExerciseCompletionMap>({});
 
   const successMessageTimeoutMapRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
@@ -219,6 +222,43 @@ export default function WorkoutSessionScreen() {
     }
   };
 
+
+  const orderedTemplateExerciseList = useMemo(() => {
+    const activeExerciseList: TemplateExercise[] = [];
+    const completedExerciseList: TemplateExercise[] = [];
+
+    templateExerciseList.forEach((templateExercise) => {
+      if (exerciseCompletionMap[templateExercise.id]) {
+        completedExerciseList.push(templateExercise);
+        return;
+      }
+
+      activeExerciseList.push(templateExercise);
+    });
+
+    return [...activeExerciseList, ...completedExerciseList];
+  }, [templateExerciseList, exerciseCompletionMap]);
+
+  const handleFinishExercise = (templateExerciseId: number) => {
+    setExerciseCompletionMap((currentCompletionMap) => ({
+      ...currentCompletionMap,
+      [templateExerciseId]: true
+    }));
+
+    setExerciseInputMap((currentInputMap) => ({
+      ...currentInputMap,
+      [templateExerciseId]: {
+        load: '',
+        reps: ''
+      }
+    }));
+
+    setExerciseSuccessMessageMap((currentSuccessMessageMap) => ({
+      ...currentSuccessMessageMap,
+      [templateExerciseId]: null
+    }));
+  };
+
   const handleAddSet = async (templateExercise: TemplateExercise) => {
     if (!workoutSessionId) {
       setScreenErrorMessage('Sessão de treino não encontrada.');
@@ -327,88 +367,121 @@ export default function WorkoutSessionScreen() {
       <Text style={styles.screenTitle}>{workoutTemplate.name}</Text>
       <Text style={styles.secondaryText}>Início: {new Date(sessionStartedAt).toLocaleString()}</Text>
 
-      {templateExerciseList.map((templateExercise) => {
+      {orderedTemplateExerciseList.map((templateExercise) => {
         const currentExerciseInput = exerciseInputMap[templateExercise.id] ?? { load: '', reps: '' };
         const currentExerciseSetList = exerciseSetMap[templateExercise.id] ?? [];
         const isAddingSet = Boolean(exerciseLoadingMap[templateExercise.id]);
+        const isExerciseCompleted = Boolean(exerciseCompletionMap[templateExercise.id]);
+        const exerciseVolumeTotal = calculateExerciseVolumeTotal(currentExerciseSetList);
 
         return (
-          <View key={templateExercise.id} style={styles.exerciseCard}>
-            <Text style={styles.exerciseName}>{templateExercise.name}</Text>
-            {templateExercise.machine ? (
-              <Text style={styles.exerciseMachine}>{templateExercise.machine}</Text>
-            ) : null}
-
-            <View style={styles.exerciseSection}>
-              <Text style={styles.sectionTitle}>Séries salvas</Text>
-              <View style={styles.setListContainer}>
-                {currentExerciseSetList.length === 0 ? (
-                  <Text style={styles.secondaryText}>Nenhuma série registrada.</Text>
-                ) : (
-                  currentExerciseSetList.map((workoutSet) => (
-                    <Text key={workoutSet.id} style={styles.setText}>
-                      Série {workoutSet.setIndex} — {workoutSet.load} kg x {workoutSet.reps}
-                    </Text>
-                  ))
-                )}
+          <View
+            key={templateExercise.id}
+            style={[styles.exerciseCard, isExerciseCompleted && styles.completedExerciseCard]}
+          >
+            <View style={styles.exerciseHeaderRow}>
+              <View style={styles.exerciseHeaderContent}>
+                <Text style={styles.exerciseName}>{templateExercise.name}</Text>
+                {templateExercise.machine ? (
+                  <Text style={styles.exerciseMachine}>{templateExercise.machine}</Text>
+                ) : null}
               </View>
+
+              {isExerciseCompleted ? (
+                <View style={styles.completedBadge}>
+                  <Text style={styles.completedBadgeText}>Finalizado</Text>
+                </View>
+              ) : null}
             </View>
 
-            <View style={styles.exerciseSection}>
-              <Text style={styles.sectionTitle}>Adicionar série</Text>
-
-              <View style={styles.setInputRow}>
-                <View style={styles.loadInputContainer}>
-                  <TextInput
-                    style={[styles.textInput, styles.smallInput]}
-                    value={currentExerciseInput.load}
-                    onChangeText={(value) => handleExerciseInputChange(templateExercise.id, 'load', value)}
-                    placeholder="Carga (kg)"
-                    placeholderTextColor={theme.colors.textSecondary}
-                    keyboardType="numeric"
-                  />
-
-                  <View style={styles.quickActionsContainer}>
-                    <Pressable
-                      style={styles.quickActionButton}
-                      onPress={() => handleLoadQuickIncrement(templateExercise.id, 2.5)}
-                    >
-                      <Text style={styles.quickActionButtonText}>+2.5</Text>
-                    </Pressable>
-
-                    <Pressable
-                      style={styles.quickActionButton}
-                      onPress={() => handleLoadQuickIncrement(templateExercise.id, 5)}
-                    >
-                      <Text style={styles.quickActionButtonText}>+5</Text>
-                    </Pressable>
+            {isExerciseCompleted ? (
+              <View style={styles.exerciseSummaryContainer}>
+                <Text style={styles.secondaryText}>Volume total da sessão</Text>
+                <Text style={styles.volumeTotalText}>{exerciseVolumeTotal} kg</Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.exerciseSection}>
+                  <Text style={styles.sectionTitle}>Séries salvas</Text>
+                  <View style={styles.setListContainer}>
+                    {currentExerciseSetList.length === 0 ? (
+                      <Text style={styles.secondaryText}>Nenhuma série registrada.</Text>
+                    ) : (
+                      currentExerciseSetList.map((workoutSet) => (
+                        <Text key={workoutSet.id} style={styles.setText}>
+                          Série {workoutSet.setIndex} — {workoutSet.load} kg x {workoutSet.reps}
+                        </Text>
+                      ))
+                    )}
                   </View>
                 </View>
 
-                <TextInput
-                  style={[styles.textInput, styles.smallInput]}
-                  value={currentExerciseInput.reps}
-                  onChangeText={(value) => handleExerciseInputChange(templateExercise.id, 'reps', value)}
-                  placeholder="Reps"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  keyboardType="numeric"
-                />
-              </View>
+                <View style={styles.exerciseSection}>
+                  <Text style={styles.sectionTitle}>Adicionar série</Text>
 
-              <Pressable
-                style={[styles.primaryButton, isAddingSet && styles.disabledButton]}
-                onPress={() => handleAddSet(templateExercise)}
-                disabled={isAddingSet}
-              >
-                <Text style={styles.primaryButtonText}>
-                  {isAddingSet ? 'Adicionando...' : 'Adicionar série'}
-                </Text>
-              </Pressable>
+                  <View style={styles.setInputRow}>
+                    <View style={styles.loadInputContainer}>
+                      <TextInput
+                        style={[styles.textInput, styles.smallInput]}
+                        value={currentExerciseInput.load}
+                        onChangeText={(value) => handleExerciseInputChange(templateExercise.id, 'load', value)}
+                        placeholder="Carga (kg)"
+                        placeholderTextColor={theme.colors.textSecondary}
+                        keyboardType="numeric"
+                      />
 
-              {exerciseSuccessMessageMap[templateExercise.id] ? (
-                <Text style={styles.successMessage}>{exerciseSuccessMessageMap[templateExercise.id]}</Text>
-              ) : null}
-            </View>
+                      <View style={styles.quickActionsContainer}>
+                        <Pressable
+                          style={styles.quickActionButton}
+                          onPress={() => handleLoadQuickIncrement(templateExercise.id, 2.5)}
+                        >
+                          <Text style={styles.quickActionButtonText}>+2.5</Text>
+                        </Pressable>
+
+                        <Pressable
+                          style={styles.quickActionButton}
+                          onPress={() => handleLoadQuickIncrement(templateExercise.id, 5)}
+                        >
+                          <Text style={styles.quickActionButtonText}>+5</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+
+                    <TextInput
+                      style={[styles.textInput, styles.smallInput]}
+                      value={currentExerciseInput.reps}
+                      onChangeText={(value) => handleExerciseInputChange(templateExercise.id, 'reps', value)}
+                      placeholder="Reps"
+                      placeholderTextColor={theme.colors.textSecondary}
+                      keyboardType="numeric"
+                    />
+                  </View>
+
+                  <View style={styles.exerciseActionsRow}>
+                    <Pressable
+                      style={[styles.primaryButton, styles.exerciseActionButton, isAddingSet && styles.disabledButton]}
+                      onPress={() => handleAddSet(templateExercise)}
+                      disabled={isAddingSet}
+                    >
+                      <Text style={styles.primaryButtonText}>
+                        {isAddingSet ? 'Adicionando...' : 'Adicionar série'}
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={[styles.secondaryButton, styles.exerciseActionButton]}
+                      onPress={() => handleFinishExercise(templateExercise.id)}
+                    >
+                      <Text style={styles.secondaryButtonText}>Finalizar exercício</Text>
+                    </Pressable>
+                  </View>
+
+                  {exerciseSuccessMessageMap[templateExercise.id] ? (
+                    <Text style={styles.successMessage}>{exerciseSuccessMessageMap[templateExercise.id]}</Text>
+                  ) : null}
+                </View>
+              </>
+            )}
           </View>
         );
       })}
@@ -452,6 +525,19 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     gap: theme.spacing.sm
   },
+  completedExerciseCard: {
+    opacity: 0.9
+  },
+  exerciseHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: theme.spacing.sm
+  },
+  exerciseHeaderContent: {
+    flex: 1,
+    gap: theme.spacing.xs
+  },
   exerciseName: {
     color: theme.colors.textPrimary,
     fontSize: 18,
@@ -460,6 +546,33 @@ const styles = StyleSheet.create({
   exerciseMachine: {
     color: theme.colors.textSecondary,
     fontSize: 14
+  },
+  completedBadge: {
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    backgroundColor: theme.colors.surface
+  },
+  completedBadgeText: {
+    color: theme.colors.primary,
+    fontSize: 12,
+    fontWeight: '600'
+  },
+  exerciseSummaryContainer: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    gap: theme.spacing.xs
+  },
+  volumeTotalText: {
+    color: theme.colors.primary,
+    fontSize: 18,
+    fontWeight: '700'
   },
   exerciseSection: {
     gap: theme.spacing.sm,
@@ -514,6 +627,13 @@ const styles = StyleSheet.create({
   setListContainer: {
     gap: theme.spacing.xs
   },
+  exerciseActionsRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm
+  },
+  exerciseActionButton: {
+    flex: 1
+  },
   setText: {
     color: theme.colors.textPrimary,
     fontSize: 14
@@ -533,6 +653,21 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: theme.colors.textPrimary,
     fontSize: 16,
+    fontWeight: '600'
+  },
+  secondaryButton: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.md
+  },
+  secondaryButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: 15,
     fontWeight: '600'
   },
   disabledButton: {
