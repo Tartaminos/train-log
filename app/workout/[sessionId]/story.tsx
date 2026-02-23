@@ -32,7 +32,9 @@ export default function WorkoutStoryScreen() {
   const [healthWorkoutData, setHealthWorkoutData] = useState<HealthWorkoutData | null>(null);
   const [isHealthIntegrationEnabled, setIsHealthIntegrationEnabled] = useState(false);
   const [postWorkoutPhotoUri, setPostWorkoutPhotoUri] = useState<string | undefined>(undefined);
-  const [mediaLibraryPermissionResponse, requestMediaLibraryPermission] = MediaLibrary.usePermissions();
+  const [mediaLibraryPermissionResponse, requestMediaLibraryPermission] = MediaLibrary.usePermissions({
+    granularPermissions: ['photo']
+  });
 
   const parsedSessionId = useMemo(() => {
     const sessionIdParam = Array.isArray(sessionId) ? sessionId[0] : sessionId;

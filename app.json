@@ -30,7 +30,15 @@
       "expo-router",
       "expo-sqlite",
       "expo-asset",
-      "expo-camera"
+      "expo-camera",
+      [
+        "expo-media-library",
+        {
+          "granularPermissions": [
+            "photo"
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
