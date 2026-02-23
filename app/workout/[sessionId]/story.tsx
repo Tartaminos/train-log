@@ -126,7 +126,7 @@ export default function WorkoutStoryScreen() {
         mediaTypes: ['images'],
         quality: 1,
         allowsEditing: true,
-        aspect: [1, 1]
+        aspect: [9, 16]
       });
 
       if (!capturedImage.canceled && capturedImage.assets.length > 0) {
