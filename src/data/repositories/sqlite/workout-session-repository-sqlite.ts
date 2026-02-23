@@ -20,7 +20,7 @@ type WorkoutSessionRow = {
 type WorkoutSummaryTotalsRow = {
   sets_count: number;
   exercises_count: number;
-  total_volume: number;
+  total_volume: number | null;
 };
 
 type WorkoutPerExerciseVolumeRow = {
@@ -53,7 +53,13 @@ function calculateDurationInMinutes(startedAt: string, endedAt: string | null): 
   }
 
   const elapsedMilliseconds = finishedTimestamp - startedTimestamp;
-  return Math.floor(elapsedMilliseconds / (1000 * 60));
+  const elapsedMinutes = Math.floor(elapsedMilliseconds / (1000 * 60));
+
+  if (endedAt && elapsedMilliseconds > 0 && elapsedMinutes === 0) {
+    return 1;
+  }
+
+  return elapsedMinutes;
 }
 
 export class WorkoutSessionRepositorySQLite implements WorkoutSessionRepository {
@@ -145,11 +151,12 @@ export class WorkoutSessionRepositorySQLite implements WorkoutSessionRepository 
 
     const [totalsRow] = (await executeSql(
       `SELECT
-         COUNT(*) AS sets_count,
-         COUNT(DISTINCT exercise_name) AS exercises_count,
-         COALESCE(SUM(load * reps), 0) AS total_volume
-       FROM workout_sets
-       WHERE workout_session_id = ?`,
+         COUNT(workout_sets.id) AS sets_count,
+         COUNT(DISTINCT workout_sets.exercise_name) AS exercises_count,
+         COALESCE(SUM(workout_sets.load * workout_sets.reps), 0) AS total_volume
+       FROM workout_sessions
+       LEFT JOIN workout_sets ON workout_sets.workout_session_id = workout_sessions.id
+       WHERE workout_sessions.id = ?`,
       [sessionId]
     )) as WorkoutSummaryTotalsRow[];
 
@@ -170,7 +177,7 @@ export class WorkoutSessionRepositorySQLite implements WorkoutSessionRepository 
       startedAt: new Date(session.startedAt),
       finishedAt: session.endedAt ? new Date(session.endedAt) : null,
       durationInMinutes: calculateDurationInMinutes(session.startedAt, session.endedAt),
-      totalVolume: totalsRow?.total_volume ?? 0,
+      totalVolume: Number(totalsRow?.total_volume ?? 0),
       exercisesCount: totalsRow?.exercises_count ?? 0,
       setsCount: totalsRow?.sets_count ?? 0,
       perExerciseVolume: perExerciseRows.map((row, index) => ({
