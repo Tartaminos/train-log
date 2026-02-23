@@ -472,10 +472,10 @@ export default function WorkoutSessionScreen() {
                     </Pressable>
 
                     <Pressable
-                      style={[styles.secondaryButton, styles.exerciseActionButton]}
+                      style={[styles.finishExerciseButton, styles.exerciseActionButton]}
                       onPress={() => handleFinishExercise(templateExercise.id)}
                     >
-                      <Text style={styles.secondaryButtonText}>Finalizar exercício</Text>
+                      <Text style={styles.finishExerciseButtonText}>Finalizar exercício</Text>
                     </Pressable>
                   </View>
 
@@ -658,20 +658,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600'
   },
-  secondaryButton: {
-    backgroundColor: theme.colors.surface,
+  finishExerciseButton: {
+    backgroundColor: theme.colors.secondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: '#5E95B9',
     borderRadius: theme.radius.md,
     minHeight: 48,
+    paddingVertical: theme.spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.md
   },
-  secondaryButtonText: {
-    color: theme.colors.textPrimary,
+  finishExerciseButtonText: {
+    color: '#F6FBFF',
     fontSize: 15,
-    fontWeight: '600'
+    fontWeight: '700',
+    textAlign: 'center',
+    includeFontPadding: false
   },
   disabledButton: {
     opacity: 0.6
