@@ -15,3 +15,4 @@ export type {
   FinishWorkoutSessionInput
 } from './workout-session';
 export type { WorkoutSet, CreateWorkoutSetInput } from './workout-set';
+export type { WorkoutSessionSummary, PerExerciseVolumeSummary } from './workout-session-summary';

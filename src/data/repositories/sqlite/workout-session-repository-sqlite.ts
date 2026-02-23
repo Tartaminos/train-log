@@ -5,6 +5,7 @@ import type {
   WorkoutSession,
   WorkoutSessionWithSets
 } from '../../../domain/entities/workout-session';
+import type { WorkoutSessionSummary } from '../../../domain/entities/workout-session-summary';
 import type { WorkoutSessionRepository } from '../../../domain/repositories/workout-session-repository';
 import { WorkoutSetRepositorySQLite } from './workout-set-repository-sqlite';
 
@@ -14,6 +15,18 @@ type WorkoutSessionRow = {
   started_at: string;
   ended_at: string | null;
   notes: string | null;
+};
+
+type WorkoutSummaryTotalsRow = {
+  sets_count: number;
+  exercises_count: number;
+  total_volume: number;
+};
+
+type WorkoutPerExerciseVolumeRow = {
+  exercise_id: number | null;
+  exercise_name: string;
+  total_volume: number;
 };
 
 type RunResult = {
@@ -29,6 +42,18 @@ function mapRow(row: WorkoutSessionRow): WorkoutSession {
     endedAt: row.ended_at,
     notes: row.notes
   };
+}
+
+function calculateDurationInMinutes(startedAt: string, endedAt: string | null): number {
+  const startedTimestamp = new Date(startedAt).getTime();
+  const finishedTimestamp = new Date(endedAt ?? new Date().toISOString()).getTime();
+
+  if (Number.isNaN(startedTimestamp) || Number.isNaN(finishedTimestamp) || finishedTimestamp < startedTimestamp) {
+    return 0;
+  }
+
+  const elapsedMilliseconds = finishedTimestamp - startedTimestamp;
+  return Math.floor(elapsedMilliseconds / (1000 * 60));
 }
 
 export class WorkoutSessionRepositorySQLite implements WorkoutSessionRepository {
@@ -98,6 +123,53 @@ export class WorkoutSessionRepositorySQLite implements WorkoutSessionRepository 
     return {
       ...session,
       sets
+    };
+  }
+
+  async getWorkoutSessionSummary(sessionId: number): Promise<WorkoutSessionSummary | null> {
+    await initDatabase();
+
+    const session = await this.getSessionById(sessionId);
+
+    if (!session) {
+      return null;
+    }
+
+    const [totalsRow] = (await executeSql(
+      `SELECT
+         COUNT(*) AS sets_count,
+         COUNT(DISTINCT exercise_name) AS exercises_count,
+         COALESCE(SUM(load * reps), 0) AS total_volume
+       FROM workout_sets
+       WHERE workout_session_id = ?`,
+      [sessionId]
+    )) as WorkoutSummaryTotalsRow[];
+
+    const perExerciseRows = (await executeSql(
+      `SELECT
+         MIN(template_exercise_id) AS exercise_id,
+         exercise_name,
+         COALESCE(SUM(load * reps), 0) AS total_volume
+       FROM workout_sets
+       WHERE workout_session_id = ?
+       GROUP BY exercise_name
+       ORDER BY total_volume DESC, exercise_name ASC`,
+      [sessionId]
+    )) as WorkoutPerExerciseVolumeRow[];
+
+    return {
+      sessionId: session.id,
+      startedAt: new Date(session.startedAt),
+      finishedAt: session.endedAt ? new Date(session.endedAt) : null,
+      durationInMinutes: calculateDurationInMinutes(session.startedAt, session.endedAt),
+      totalVolume: totalsRow?.total_volume ?? 0,
+      exercisesCount: totalsRow?.exercises_count ?? 0,
+      setsCount: totalsRow?.sets_count ?? 0,
+      perExerciseVolume: perExerciseRows.map((row, index) => ({
+        exerciseId: row.exercise_id ?? -(index + 1),
+        exerciseName: row.exercise_name,
+        totalVolume: row.total_volume
+      }))
     };
   }
 
