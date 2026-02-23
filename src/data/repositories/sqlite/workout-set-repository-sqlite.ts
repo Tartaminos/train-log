@@ -36,6 +36,11 @@ type ExerciseChartEntry = {
   load: number;
 };
 
+type SessionRepresentativeLoadEntry = {
+  sessionDate: string;
+  representativeLoad: number;
+};
+
 type ExerciseSummaryRow = {
   exercise_name: string;
   best_load: number | null;
@@ -60,6 +65,33 @@ function mapRow(row: WorkoutSetRow): WorkoutSet {
 }
 
 export class WorkoutSetRepositorySQLite implements WorkoutSetRepository {
+  private buildSessionRepresentativeLoadEntries(
+    exerciseHistoryRowList: ExercisePerformanceRow[]
+  ): ExerciseChartEntry[] {
+    const sessionRepresentativeLoadMap = new Map<string, SessionRepresentativeLoadEntry>();
+
+    exerciseHistoryRowList.forEach((exerciseHistoryRow) => {
+      const currentSessionLoadEntry = sessionRepresentativeLoadMap.get(
+        exerciseHistoryRow.session_started_at
+      );
+
+      // Gráfico de carga: usa a melhor carga da sessão como carga representativa.
+      if (!currentSessionLoadEntry || exerciseHistoryRow.load > currentSessionLoadEntry.representativeLoad) {
+        sessionRepresentativeLoadMap.set(exerciseHistoryRow.session_started_at, {
+          sessionDate: exerciseHistoryRow.session_started_at,
+          representativeLoad: exerciseHistoryRow.load
+        });
+      }
+    });
+
+    return Array.from(sessionRepresentativeLoadMap.values())
+      .map((sessionLoadEntry) => ({
+        sessionDate: sessionLoadEntry.sessionDate,
+        load: sessionLoadEntry.representativeLoad
+      }))
+      .reverse();
+  }
+
   async createSet(input: CreateWorkoutSetInput): Promise<WorkoutSet> {
     await initDatabase();
 
@@ -145,7 +177,7 @@ export class WorkoutSetRepositorySQLite implements WorkoutSetRepository {
     )) as ExercisePerformanceRow[];
 
     const exerciseHistoryMap = new Map<string, ExercisePerformanceSummary['historyItemList']>();
-    const exerciseEntriesChronologicalMap = new Map<string, ExerciseChartEntry[]>();
+    const exerciseHistoryRowMap = new Map<string, ExercisePerformanceRow[]>();
 
     exerciseHistoryRowList.forEach((exerciseHistoryRow) => {
       const currentHistoryItemList = exerciseHistoryMap.get(exerciseHistoryRow.exercise_name) ?? [];
@@ -163,18 +195,11 @@ export class WorkoutSetRepositorySQLite implements WorkoutSetRepository {
 
       exerciseHistoryMap.set(exerciseHistoryRow.exercise_name, currentHistoryItemList);
 
-      const currentEntriesChronological =
-        exerciseEntriesChronologicalMap.get(exerciseHistoryRow.exercise_name) ?? [];
+      const currentExerciseHistoryRowList =
+        exerciseHistoryRowMap.get(exerciseHistoryRow.exercise_name) ?? [];
 
-      currentEntriesChronological.push({
-        sessionDate: exerciseHistoryRow.session_started_at,
-        load: exerciseHistoryRow.load
-      });
-
-      exerciseEntriesChronologicalMap.set(
-        exerciseHistoryRow.exercise_name,
-        currentEntriesChronological
-      );
+      currentExerciseHistoryRowList.push(exerciseHistoryRow);
+      exerciseHistoryRowMap.set(exerciseHistoryRow.exercise_name, currentExerciseHistoryRowList);
     });
 
     return exerciseSummaryRowList.map((exerciseSummaryRow) => ({
@@ -182,8 +207,9 @@ export class WorkoutSetRepositorySQLite implements WorkoutSetRepository {
       bestLoad: exerciseSummaryRow.best_load ?? 0,
       totalAccumulatedVolume: exerciseSummaryRow.total_accumulated_volume ?? 0,
       historyItemList: exerciseHistoryMap.get(exerciseSummaryRow.exercise_name) ?? [],
-      entriesChronological:
-        (exerciseEntriesChronologicalMap.get(exerciseSummaryRow.exercise_name) ?? []).slice().reverse()
+      entriesChronological: this.buildSessionRepresentativeLoadEntries(
+        exerciseHistoryRowMap.get(exerciseSummaryRow.exercise_name) ?? []
+      )
     }));
   }
 
@@ -242,12 +268,7 @@ export class WorkoutSetRepositorySQLite implements WorkoutSetRepository {
       bestLoad: exerciseSummaryRow.best_load ?? 0,
       totalAccumulatedVolume: exerciseSummaryRow.total_accumulated_volume ?? 0,
       historyItemList,
-      entriesChronological: historyItemList
-        .map((historyItem) => ({
-          sessionDate: historyItem.sessionStartedAt,
-          load: historyItem.load
-        }))
-        .reverse()
+      entriesChronological: this.buildSessionRepresentativeLoadEntries(exerciseHistoryRowList)
     };
   }
 }
