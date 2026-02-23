@@ -1,10 +1,11 @@
 {
   "expo": {
-    "name": "train-log",
-    "slug": "train-log",
+    "name": "Iron Track",
+    "slug": "iron-track",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
     "androidNavigationBar": {
       "visible": "immersive",
       "barStyle": "light-content",
