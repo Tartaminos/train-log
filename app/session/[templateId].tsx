@@ -425,14 +425,17 @@ export default function WorkoutSessionScreen() {
 
                   <View style={styles.setInputRow}>
                     <View style={styles.loadInputContainer}>
-                      <TextInput
-                        style={[styles.textInput, styles.smallInput]}
-                        value={currentExerciseInput.load}
-                        onChangeText={(value) => handleExerciseInputChange(templateExercise.id, 'load', value)}
-                        placeholder="Carga (kg)"
-                        placeholderTextColor={theme.colors.textSecondary}
-                        keyboardType="numeric"
-                      />
+                      <View style={styles.inputWithUnitContainer}>
+                        <TextInput
+                          style={[styles.textInput, styles.inputWithUnitField]}
+                          value={currentExerciseInput.load}
+                          onChangeText={(value) => handleExerciseInputChange(templateExercise.id, 'load', value)}
+                          placeholder="Carga"
+                          placeholderTextColor={theme.colors.textSecondary}
+                          keyboardType="numeric"
+                        />
+                        <Text style={styles.inputUnitLabel}>kg</Text>
+                      </View>
 
                       <View style={styles.quickActionsContainer}>
                         <Pressable
@@ -451,14 +454,19 @@ export default function WorkoutSessionScreen() {
                       </View>
                     </View>
 
-                    <TextInput
-                      style={[styles.textInput, styles.smallInput]}
-                      value={currentExerciseInput.reps}
-                      onChangeText={(value) => handleExerciseInputChange(templateExercise.id, 'reps', value)}
-                      placeholder="Reps"
-                      placeholderTextColor={theme.colors.textSecondary}
-                      keyboardType="numeric"
-                    />
+                    <View style={styles.repsInputContainer}>
+                      <View style={styles.inputWithUnitContainer}>
+                        <TextInput
+                          style={[styles.textInput, styles.inputWithUnitField]}
+                          value={currentExerciseInput.reps}
+                          onChangeText={(value) => handleExerciseInputChange(templateExercise.id, 'reps', value)}
+                          placeholder="Reps"
+                          placeholderTextColor={theme.colors.textSecondary}
+                          keyboardType="numeric"
+                        />
+                        <Text style={styles.inputUnitLabel}>reps</Text>
+                      </View>
+                    </View>
                   </View>
 
                   <View style={styles.exerciseActionsRow}>
@@ -625,7 +633,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16
   },
-  smallInput: {
+  inputWithUnitContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs
+  },
+  inputWithUnitField: {
+    flex: 1
+  },
+  inputUnitLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  repsInputContainer: {
     flex: 1
   },
   setListContainer: {
