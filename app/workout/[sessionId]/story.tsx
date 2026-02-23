@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Camera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
@@ -13,6 +14,7 @@ import type { WorkoutSessionSummary } from '../../../src/domain/entities';
 import type { HealthWorkoutData } from '../../../src/domain/health/HealthData';
 import { Screen } from '../../../src/ui/components/Layout';
 import { WorkoutStoryCanvas } from '../../../src/ui/components/WorkoutStoryCanvas';
+import { syncAndroidNavigationBarDynamicMode } from '../../../src/ui/system-ui/androidNavigationBar';
 import { theme } from '../../../src/ui/theme';
 
 const workoutSessionRepository = new WorkoutSessionRepositorySQLite();
@@ -35,6 +37,14 @@ export default function WorkoutStoryScreen() {
   const [mediaLibraryPermissionResponse, requestMediaLibraryPermission] = MediaLibrary.usePermissions({
     granularPermissions: ['photo']
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      syncAndroidNavigationBarDynamicMode();
+
+      return undefined;
+    }, [])
+  );
 
   const parsedSessionId = useMemo(() => {
     const sessionIdParam = Array.isArray(sessionId) ? sessionId[0] : sessionId;
