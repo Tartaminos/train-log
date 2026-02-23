@@ -8,6 +8,14 @@ type WorkoutStoryCanvasProps = {
   summary: WorkoutSessionSummary;
   photoUri?: string;
   healthData?: HealthWorkoutData | null;
+  isHealthIntegrationEnabled?: boolean;
+};
+
+type MetricCardData = {
+  key: string;
+  label: string;
+  value: string;
+  valueStyle?: 'default' | 'health';
 };
 
 function formatWorkoutDate(workoutDate: Date): string {
@@ -36,20 +44,52 @@ function hasHealthData(healthData?: HealthWorkoutData | null): boolean {
   );
 }
 
-export function WorkoutStoryCanvas({ summary, photoUri, healthData }: WorkoutStoryCanvasProps) {
+function buildHealthSummaryText(healthData: HealthWorkoutData): string {
+  return [
+    healthData.estimatedCalories !== undefined ? `Calorias: ${healthData.estimatedCalories} kcal` : null,
+    healthData.averageHeartRate !== undefined || healthData.maxHeartRate !== undefined
+      ? `FC méd/máx: ${healthData.averageHeartRate ?? '-'} / ${healthData.maxHeartRate ?? '-'} bpm`
+      : null
+  ]
+    .filter(Boolean)
+    .join(' • ');
+}
+
+export function WorkoutStoryCanvas({
+  summary,
+  photoUri,
+  healthData,
+  isHealthIntegrationEnabled = false
+}: WorkoutStoryCanvasProps) {
   const shouldRenderPostWorkoutPhoto = Boolean(photoUri);
-  const healthSummaryText = hasHealthData(healthData)
-    ? [
-        healthData?.estimatedCalories !== undefined
-          ? `Calorias: ${healthData.estimatedCalories} kcal`
-          : null,
-        healthData?.averageHeartRate !== undefined || healthData?.maxHeartRate !== undefined
-          ? `FC méd/máx: ${healthData?.averageHeartRate ?? '-'} / ${healthData?.maxHeartRate ?? '-'} bpm`
-          : null
-      ]
-        .filter(Boolean)
-        .join(' • ')
-    : 'Sem dados de saúde para esta sessão';
+  const shouldRenderHealthCard = isHealthIntegrationEnabled && hasHealthData(healthData);
+
+  const metricCards: MetricCardData[] = [
+    {
+      key: 'duration',
+      label: 'Duração',
+      value: `${summary.durationInMinutes} min`
+    },
+    {
+      key: 'volume',
+      label: 'Volume',
+      value: `${formatTotalVolume(summary.totalVolume)} kg`
+    },
+    {
+      key: 'date',
+      label: 'Data',
+      value: formatWorkoutDate(summary.startedAt)
+    }
+  ];
+
+  if (shouldRenderHealthCard && healthData) {
+    metricCards.push({
+      key: 'health',
+      label: 'Saúde',
+      value: buildHealthSummaryText(healthData),
+      valueStyle: 'health'
+    });
+  }
 
   return (
     <View style={styles.canvasContainer}>
@@ -60,25 +100,17 @@ export function WorkoutStoryCanvas({ summary, photoUri, healthData }: WorkoutSto
 
       <View style={styles.mainSectionContainer}>
         <View style={styles.metricsGrid}>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Duração</Text>
-            <Text style={styles.metricValue}>{summary.durationInMinutes} min</Text>
-          </View>
+          {metricCards.map((metricCard) => {
+            const metricValueStyle =
+              metricCard.valueStyle === 'health' ? styles.healthDataValue : styles.metricValue;
 
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Volume</Text>
-            <Text style={styles.metricValue}>{formatTotalVolume(summary.totalVolume)} kg</Text>
-          </View>
-
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Data</Text>
-            <Text style={styles.metricValue}>{formatWorkoutDate(summary.startedAt)}</Text>
-          </View>
-
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Saúde</Text>
-            <Text style={styles.healthDataValue}>{healthSummaryText}</Text>
-          </View>
+            return (
+              <View key={metricCard.key} style={styles.metricCard}>
+                <Text style={styles.metricLabel}>{metricCard.label}</Text>
+                <Text style={metricValueStyle}>{metricCard.value}</Text>
+              </View>
+            );
+          })}
         </View>
 
         {shouldRenderPostWorkoutPhoto && (

@@ -29,6 +29,7 @@ export default function WorkoutStoryScreen() {
   const [storyActionFeedback, setStoryActionFeedback] = useState<string | null>(null);
   const [workoutSessionSummary, setWorkoutSessionSummary] = useState<WorkoutSessionSummary | null>(null);
   const [healthWorkoutData, setHealthWorkoutData] = useState<HealthWorkoutData | null>(null);
+  const [isHealthIntegrationEnabled, setIsHealthIntegrationEnabled] = useState(false);
   const [postWorkoutPhotoUri, setPostWorkoutPhotoUri] = useState<string | undefined>(undefined);
   const [mediaLibraryPermissionResponse, requestMediaLibraryPermission] = MediaLibrary.usePermissions();
 
@@ -44,20 +45,23 @@ export default function WorkoutStoryScreen() {
       if (!Number.isInteger(parsedSessionId) || parsedSessionId <= 0) {
         setWorkoutSessionSummary(null);
         setHealthWorkoutData(null);
+        setIsHealthIntegrationEnabled(false);
         setIsLoadingSummary(false);
         return;
       }
 
       try {
         setIsLoadingSummary(true);
-        const [loadedSummary, loadedHealthData] = await Promise.all([
+        const [loadedSummary, healthIntegrationEnabled, loadedHealthData] = await Promise.all([
           workoutSessionRepository.getWorkoutSessionSummary(parsedSessionId),
+          healthDataService.isHealthIntegrationEnabled(),
           healthDataService.getHealthDataForSession(parsedSessionId)
         ]);
 
         if (!isCancelled) {
           setWorkoutSessionSummary(loadedSummary ?? null);
-          setHealthWorkoutData(loadedHealthData ?? null);
+          setIsHealthIntegrationEnabled(healthIntegrationEnabled);
+          setHealthWorkoutData(healthIntegrationEnabled ? loadedHealthData ?? null : null);
         }
       } catch (error) {
         console.error('Failed to load workout summary for story', error);
@@ -65,6 +69,7 @@ export default function WorkoutStoryScreen() {
         if (!isCancelled) {
           setWorkoutSessionSummary(null);
           setHealthWorkoutData(null);
+          setIsHealthIntegrationEnabled(false);
         }
       } finally {
         if (!isCancelled) {
@@ -225,6 +230,7 @@ export default function WorkoutStoryScreen() {
           summary={workoutSessionSummary}
           photoUri={postWorkoutPhotoUri}
           healthData={healthWorkoutData}
+          isHealthIntegrationEnabled={isHealthIntegrationEnabled}
         />
       </ViewShot>
 
