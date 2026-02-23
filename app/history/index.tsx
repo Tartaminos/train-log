@@ -148,52 +148,54 @@ export default function WorkoutHistoryScreen() {
     <Screen>
       <Text style={styles.screenTitle}>Histórico de treinos</Text>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterListContainer}
-      >
-        <Pressable
-          style={[
-            styles.filterButton,
-            selectedTemplateId === 'all' ? styles.filterButtonActive : styles.filterButtonInactive
-          ]}
-          onPress={() => setSelectedTemplateId('all')}
+      <View style={styles.filterBarContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterListContainer}
         >
-          <Text
+          <Pressable
             style={[
-              styles.filterButtonLabel,
-              selectedTemplateId === 'all' ? styles.filterButtonLabelActive : styles.filterButtonLabelInactive
+              styles.filterButton,
+              selectedTemplateId === 'all' ? styles.filterButtonActive : styles.filterButtonInactive
             ]}
+            onPress={() => setSelectedTemplateId('all')}
           >
-            Todas
-          </Text>
-        </Pressable>
-
-        {templateFilterOptionList.map((templateFilterOption) => {
-          const isSelectedTemplate = selectedTemplateId === templateFilterOption.id;
-
-          return (
-            <Pressable
-              key={templateFilterOption.id}
+            <Text
               style={[
-                styles.filterButton,
-                isSelectedTemplate ? styles.filterButtonActive : styles.filterButtonInactive
+                styles.filterButtonLabel,
+                selectedTemplateId === 'all' ? styles.filterButtonLabelActive : styles.filterButtonLabelInactive
               ]}
-              onPress={() => setSelectedTemplateId(templateFilterOption.id)}
             >
-              <Text
+              Todas
+            </Text>
+          </Pressable>
+
+          {templateFilterOptionList.map((templateFilterOption) => {
+            const isSelectedTemplate = selectedTemplateId === templateFilterOption.id;
+
+            return (
+              <Pressable
+                key={templateFilterOption.id}
                 style={[
-                  styles.filterButtonLabel,
-                  isSelectedTemplate ? styles.filterButtonLabelActive : styles.filterButtonLabelInactive
+                  styles.filterButton,
+                  isSelectedTemplate ? styles.filterButtonActive : styles.filterButtonInactive
                 ]}
+                onPress={() => setSelectedTemplateId(templateFilterOption.id)}
               >
-                {templateFilterOption.name}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+                <Text
+                  style={[
+                    styles.filterButtonLabel,
+                    isSelectedTemplate ? styles.filterButtonLabelActive : styles.filterButtonLabelInactive
+                  ]}
+                >
+                  {templateFilterOption.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       <FlatList
         data={filteredHistorySessionList}
@@ -236,15 +238,22 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     paddingBottom: theme.spacing.md
   },
+  filterBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md
+  },
   filterListContainer: {
     gap: theme.spacing.xs,
-    marginBottom: theme.spacing.md
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.md
   },
   filterButton: {
     borderRadius: theme.radius.full,
     borderWidth: 1,
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.xs
+    paddingVertical: theme.spacing.xs,
+    alignSelf: 'flex-start'
   },
   filterButtonActive: {
     backgroundColor: theme.colors.primary,
