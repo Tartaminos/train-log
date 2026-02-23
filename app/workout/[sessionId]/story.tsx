@@ -30,6 +30,7 @@ export default function WorkoutStoryScreen() {
   const [workoutSessionSummary, setWorkoutSessionSummary] = useState<WorkoutSessionSummary | null>(null);
   const [healthWorkoutData, setHealthWorkoutData] = useState<HealthWorkoutData | null>(null);
   const [postWorkoutPhotoUri, setPostWorkoutPhotoUri] = useState<string | undefined>(undefined);
+  const [mediaLibraryPermissionResponse, requestMediaLibraryPermission] = MediaLibrary.usePermissions();
 
   const parsedSessionId = useMemo(() => {
     const sessionIdParam = Array.isArray(sessionId) ? sessionId[0] : sessionId;
@@ -161,10 +162,19 @@ export default function WorkoutStoryScreen() {
       setIsSavingStory(true);
       setStoryActionFeedback(null);
 
-      const { status: permissionStatus } = await MediaLibrary.requestPermissionsAsync();
-      if (permissionStatus !== 'granted') {
-        Alert.alert('Permissão necessária', 'Permita o acesso às fotos para salvar seu story na galeria.');
-        setStoryActionFeedback('Permissão para salvar negada.');
+      let resolvedPermissionResponse = mediaLibraryPermissionResponse;
+      if (!resolvedPermissionResponse || resolvedPermissionResponse.status !== MediaLibrary.PermissionStatus.GRANTED) {
+        try {
+          resolvedPermissionResponse = await requestMediaLibraryPermission();
+        } catch (permissionError) {
+          console.error('Failed to request media library permission', permissionError);
+          setStoryActionFeedback('Permissão de acesso à galeria negada.');
+          return;
+        }
+      }
+
+      if (!resolvedPermissionResponse || resolvedPermissionResponse.status !== MediaLibrary.PermissionStatus.GRANTED) {
+        setStoryActionFeedback('Permissão de acesso à galeria negada.');
         return;
       }
 
@@ -174,16 +184,15 @@ export default function WorkoutStoryScreen() {
         return;
       }
 
-      await MediaLibrary.saveToLibraryAsync(generatedImageUri);
-      setStoryActionFeedback('Story salvo na galeria com sucesso.');
+      await MediaLibrary.createAssetAsync(generatedImageUri);
+      setStoryActionFeedback('Story salvo na galeria!');
     } catch (error) {
       console.error('Failed to save story to gallery', error);
-      Alert.alert('Erro ao salvar', 'Não foi possível salvar o story na galeria agora. Tente novamente.');
       setStoryActionFeedback('Erro ao salvar story na galeria.');
     } finally {
       setIsSavingStory(false);
     }
-  }, [captureStoryImage, workoutSessionSummary]);
+  }, [captureStoryImage, mediaLibraryPermissionResponse, requestMediaLibraryPermission, workoutSessionSummary]);
 
   const handleBackToHome = useCallback(() => {
     router.push('/');
