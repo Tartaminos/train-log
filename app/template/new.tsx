@@ -32,6 +32,7 @@ export default function NewTemplateScreen() {
   const [pendingExercises, setPendingExercises] = useState<PendingExercise[]>([]);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [templateNameErrorMessage, setTemplateNameErrorMessage] = useState<string | null>(null);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
 
   const clearNewExerciseFields = () => {
@@ -77,11 +78,12 @@ export default function NewTemplateScreen() {
     const trimmedTemplateName = templateName.trim();
 
     if (!trimmedTemplateName) {
-      setErrorMessage('Informe o nome da ficha.');
+      setTemplateNameErrorMessage('Nome da ficha é obrigatório.');
       return;
     }
 
     try {
+      setTemplateNameErrorMessage(null);
       setErrorMessage(null);
       setIsSavingTemplate(true);
 
@@ -123,13 +125,21 @@ export default function NewTemplateScreen() {
         <View style={styles.formGroup}>
           <Text style={styles.inputLabel}>Nome da ficha *</Text>
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, templateNameErrorMessage && styles.textInputError]}
             value={templateName}
-            onChangeText={setTemplateName}
+            onChangeText={(value) => {
+              setTemplateName(value);
+              if (templateNameErrorMessage) {
+                setTemplateNameErrorMessage(null);
+              }
+            }}
             placeholder="Ex.: Treino A"
             placeholderTextColor={theme.colors.textSecondary}
             autoCapitalize="sentences"
           />
+          {templateNameErrorMessage ? (
+            <Text style={styles.inputErrorMessage}>{templateNameErrorMessage}</Text>
+          ) : null}
         </View>
 
         <View style={styles.formGroup}>
@@ -347,6 +357,14 @@ const styles = StyleSheet.create({
     color: theme.colors.error,
     marginTop: theme.spacing.xs,
     fontSize: 14
+  },
+  textInputError: {
+    borderColor: theme.colors.error
+  },
+  inputErrorMessage: {
+    color: theme.colors.error,
+    fontSize: 12,
+    marginTop: theme.spacing.xs
   },
   mainActionsContainer: {
     marginTop: theme.spacing.md,

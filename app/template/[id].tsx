@@ -19,6 +19,26 @@ import { theme } from '../../src/ui/theme';
 const workoutTemplateRepository = new WorkoutTemplateRepositorySQLite();
 const templateExerciseRepository = new TemplateExerciseRepositorySQLite();
 
+function reorderExercisesByDirection(
+  exercises: TemplateExercise[],
+  exerciseIndex: number,
+  direction: 'up' | 'down'
+): TemplateExercise[] {
+  const targetIndex = direction === 'up' ? exerciseIndex - 1 : exerciseIndex + 1;
+
+  if (targetIndex < 0 || targetIndex >= exercises.length) {
+    return exercises;
+  }
+
+  const reorderedExercises = [...exercises];
+  const exerciseToMove = reorderedExercises[exerciseIndex];
+
+  reorderedExercises.splice(exerciseIndex, 1);
+  reorderedExercises.splice(targetIndex, 0, exerciseToMove);
+
+  return reorderedExercises;
+}
+
 export default function EditTemplateScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string | string[] }>();
@@ -35,6 +55,7 @@ export default function EditTemplateScreen() {
   const [newExerciseMachine, setNewExerciseMachine] = useState('');
 
   const [formErrorMessage, setFormErrorMessage] = useState<string | null>(null);
+  const [templateNameErrorMessage, setTemplateNameErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
@@ -80,6 +101,37 @@ export default function EditTemplateScreen() {
     loadTemplateData();
   }, [id]);
 
+  const persistExerciseSortOrder = async (exercises: TemplateExercise[]) => {
+    for (const [exerciseIndex, exercise] of exercises.entries()) {
+      await templateExerciseRepository.updateExercise({
+        id: exercise.id,
+        sortOrder: exerciseIndex + 1
+      });
+    }
+  };
+
+  const handleMoveExercise = async (exerciseIndex: number, direction: 'up' | 'down') => {
+    const currentExercises = templateExercises;
+    const reorderedExercises = reorderExercisesByDirection(currentExercises, exerciseIndex, direction);
+
+    if (reorderedExercises === currentExercises) {
+      return;
+    }
+
+    setTemplateExercises(reorderedExercises);
+
+    try {
+      await persistExerciseSortOrder(reorderedExercises);
+      setFormErrorMessage(null);
+      setSuccessMessage(null);
+    } catch (error) {
+      console.error('Failed to reorder exercises', error);
+      setTemplateExercises(currentExercises);
+      setFormErrorMessage('Não foi possível reordenar os exercícios.');
+      setSuccessMessage(null);
+    }
+  };
+
   const handleSaveTemplateChanges = async () => {
     if (!templateId) {
       return;
@@ -88,7 +140,7 @@ export default function EditTemplateScreen() {
     const trimmedTemplateName = templateName.trim();
 
     if (!trimmedTemplateName) {
-      setFormErrorMessage('Informe o nome da ficha.');
+      setTemplateNameErrorMessage('Nome da ficha é obrigatório.');
       setSuccessMessage(null);
       return;
     }
@@ -96,7 +148,10 @@ export default function EditTemplateScreen() {
     try {
       setIsSavingTemplate(true);
       setFormErrorMessage(null);
+      setTemplateNameErrorMessage(null);
       setSuccessMessage(null);
+
+      await persistExerciseSortOrder(templateExercises);
 
       const updatedTemplate = await workoutTemplateRepository.updateTemplate({
         id: templateId,
@@ -171,7 +226,7 @@ export default function EditTemplateScreen() {
         machine: newExerciseMachine.trim() || null,
         defaultLoad: null,
         defaultReps: null,
-        sortOrder: null
+        sortOrder: templateExercises.length + 1
       });
 
       setTemplateExercises((currentExercises) => [...currentExercises, createdExercise]);
@@ -195,9 +250,13 @@ export default function EditTemplateScreen() {
         return;
       }
 
-      setTemplateExercises((currentExercises) =>
-        currentExercises.filter((exercise) => exercise.id !== exerciseToRemove.id)
+      const updatedExercises = templateExercises.filter(
+        (exercise) => exercise.id !== exerciseToRemove.id
       );
+
+      setTemplateExercises(updatedExercises);
+      await persistExerciseSortOrder(updatedExercises);
+      setFormErrorMessage(null);
     } catch (error) {
       console.error('Failed to remove exercise', error);
       setFormErrorMessage('Não foi possível remover o exercício.');
@@ -236,12 +295,20 @@ export default function EditTemplateScreen() {
 
           <Text style={styles.inputLabel}>Nome da ficha *</Text>
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, templateNameErrorMessage && styles.textInputError]}
             value={templateName}
-            onChangeText={setTemplateName}
+            onChangeText={(value) => {
+              setTemplateName(value);
+              if (templateNameErrorMessage) {
+                setTemplateNameErrorMessage(null);
+              }
+            }}
             placeholder="Ex.: Treino A"
             placeholderTextColor={theme.colors.textSecondary}
           />
+          {templateNameErrorMessage ? (
+            <Text style={styles.inputErrorMessage}>{templateNameErrorMessage}</Text>
+          ) : null}
 
           <Text style={styles.inputLabel}>Observações</Text>
           <TextInput
@@ -261,7 +328,7 @@ export default function EditTemplateScreen() {
           {templateExercises.length === 0 ? (
             <Text style={styles.secondaryText}>Nenhum exercício cadastrado.</Text>
           ) : (
-            templateExercises.map((templateExercise) => (
+            templateExercises.map((templateExercise, exerciseIndex) => (
               <View key={templateExercise.id} style={styles.exerciseCard}>
                 <View style={styles.exerciseTextContent}>
                   <Text style={styles.exerciseName}>{templateExercise.name}</Text>
@@ -269,15 +336,33 @@ export default function EditTemplateScreen() {
                     <Text style={styles.secondaryText}>{templateExercise.machine}</Text>
                   ) : null}
                 </View>
-                <TouchableOpacity
-                  style={styles.removeExerciseButton}
-                  onPress={() => handleRemoveExercise(templateExercise)}
-                  disabled={removingExerciseId === templateExercise.id}
-                >
-                  <Text style={styles.removeExerciseButtonText}>
-                    {removingExerciseId === templateExercise.id ? 'Removendo...' : 'Remover'}
-                  </Text>
-                </TouchableOpacity>
+                <View style={styles.exerciseActionsContainer}>
+                  <TouchableOpacity
+                    style={styles.reorderExerciseButton}
+                    onPress={() => handleMoveExercise(exerciseIndex, 'up')}
+                    disabled={exerciseIndex === 0}
+                  >
+                    <Text style={styles.reorderExerciseButtonText}>Subir</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.reorderExerciseButton}
+                    onPress={() => handleMoveExercise(exerciseIndex, 'down')}
+                    disabled={exerciseIndex === templateExercises.length - 1}
+                  >
+                    <Text style={styles.reorderExerciseButtonText}>Descer</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.removeExerciseButton}
+                    onPress={() => handleRemoveExercise(templateExercise)}
+                    disabled={removingExerciseId === templateExercise.id}
+                  >
+                    <Text style={styles.removeExerciseButtonText}>
+                      {removingExerciseId === templateExercise.id ? 'Removendo...' : 'Remover'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))
           )}
@@ -416,6 +501,22 @@ const styles = StyleSheet.create({
   addExerciseContainer: {
     marginTop: theme.spacing.sm
   },
+  exerciseActionsContainer: {
+    gap: theme.spacing.xs
+  },
+  reorderExerciseButton: {
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm
+  },
+  reorderExerciseButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600'
+  },
   removeExerciseButton: {
     backgroundColor: theme.colors.error,
     borderRadius: theme.radius.sm,
@@ -474,6 +575,14 @@ const styles = StyleSheet.create({
     color: theme.colors.error,
     marginBottom: theme.spacing.sm,
     fontSize: 14
+  },
+  textInputError: {
+    borderColor: theme.colors.error
+  },
+  inputErrorMessage: {
+    color: theme.colors.error,
+    marginBottom: theme.spacing.sm,
+    fontSize: 12
   },
   successMessage: {
     color: theme.colors.success,
