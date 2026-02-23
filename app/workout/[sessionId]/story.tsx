@@ -7,6 +7,7 @@ import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ViewShot from 'react-native-view-shot';
 
 import { MockHealthDataService } from '../../../src/data/health/HealthDataService';
@@ -25,6 +26,7 @@ export default function WorkoutStoryScreen() {
   const viewShotRef = useRef<ViewShot | null>(null);
   const { sessionId } = useLocalSearchParams<{ sessionId: string | string[] }>();
   const router = useRouter();
+  const safeAreaInsets = useSafeAreaInsets();
 
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   const [isSharingStory, setIsSharingStory] = useState(false);
@@ -237,6 +239,14 @@ export default function WorkoutStoryScreen() {
     router.push('/');
   }, [router]);
 
+  const scrollContentContainerStyle = useMemo(
+    () => ({
+      ...styles.scrollContentContainer,
+      paddingBottom: theme.spacing.xl + safeAreaInsets.bottom
+    }),
+    [safeAreaInsets.bottom]
+  );
+
   if (isLoadingSummary) {
     return (
       <Screen>
@@ -254,7 +264,7 @@ export default function WorkoutStoryScreen() {
   }
 
   return (
-    <Screen style={styles.screen}>
+    <Screen isScrollable style={styles.screen} contentContainerStyle={scrollContentContainerStyle}>
       <ViewShot
         ref={viewShotRef}
         style={styles.storyWrapper}
@@ -305,7 +315,10 @@ export default function WorkoutStoryScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    justifyContent: 'space-between',
+    flex: 1
+  },
+  scrollContentContainer: {
+    flexGrow: 1,
     gap: theme.spacing.md
   },
   storyWrapper: {
@@ -315,7 +328,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden'
   },
   shareButton: {
-    marginTop: 'auto',
     backgroundColor: theme.colors.primary,
     borderRadius: theme.radius.md,
     minHeight: 52,
