@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import {
@@ -8,14 +8,23 @@ import {
   WorkoutTemplateRepositorySQLite
 } from '../../src/data/repositories/sqlite';
 import type { WorkoutSession } from '../../src/domain/entities';
+import type { WorkoutTemplate } from '../../src/domain/entities/workout-template';
 import { Card, Screen } from '../../src/ui/components/Layout';
 import { theme } from '../../src/ui/theme';
 
 type HistorySessionListItem = {
   id: number;
+  workoutTemplateId: number | null;
   workoutTemplateName: string;
+  startedAt: string;
   startedAtLabel: string;
   totalVolumeLabel: string;
+  setCountLabel: string;
+};
+
+type TemplateFilterOption = {
+  id: number;
+  name: string;
 };
 
 const workoutSessionRepository = new WorkoutSessionRepositorySQLite();
@@ -43,6 +52,8 @@ export default function WorkoutHistoryScreen() {
   const router = useRouter();
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [historySessionList, setHistorySessionList] = useState<HistorySessionListItem[]>([]);
+  const [templateFilterOptionList, setTemplateFilterOptionList] = useState<TemplateFilterOption[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | 'all'>('all');
 
   useEffect(() => {
     let isCancelled = false;
@@ -50,31 +61,56 @@ export default function WorkoutHistoryScreen() {
     const loadWorkoutHistory = async () => {
       try {
         setIsLoadingHistory(true);
-        const workoutSessionList = await workoutSessionRepository.getRecentSessions(50);
+        const [workoutSessionList, workoutTemplateList] = await Promise.all([
+          workoutSessionRepository.getRecentSessions(50),
+          workoutTemplateRepository.getAllTemplates()
+        ]);
+
+        const workoutTemplateMap = new Map<number, WorkoutTemplate>(
+          workoutTemplateList.map((workoutTemplate) => [workoutTemplate.id, workoutTemplate])
+        );
 
         const historyList = await Promise.all(
           workoutSessionList.map(async (workoutSession: WorkoutSession) => {
             const workoutTemplate = workoutSession.workoutTemplateId
-              ? await workoutTemplateRepository.getTemplateById(workoutSession.workoutTemplateId)
+              ? workoutTemplateMap.get(workoutSession.workoutTemplateId) ?? null
               : null;
-            const totalVolume = await workoutSetRepository.getTotalVolumeBySessionId(workoutSession.id);
+            const [totalVolume, workoutSetList] = await Promise.all([
+              workoutSetRepository.getTotalVolumeBySessionId(workoutSession.id),
+              workoutSetRepository.getSetsBySessionId(workoutSession.id)
+            ]);
 
             return {
               id: workoutSession.id,
+              workoutTemplateId: workoutSession.workoutTemplateId,
               workoutTemplateName: workoutTemplate?.name ?? 'Treino sem ficha',
+              startedAt: workoutSession.startedAt,
               startedAtLabel: formatSessionDate(workoutSession.startedAt),
-              totalVolumeLabel: `Volume: ${formatVolume(totalVolume)} kg`
+              totalVolumeLabel: `Volume: ${formatVolume(totalVolume)} kg`,
+              setCountLabel: `Séries: ${workoutSetList.length}`
             };
           })
         );
 
+        historyList.sort(
+          (firstSession, secondSession) =>
+            new Date(secondSession.startedAt).getTime() - new Date(firstSession.startedAt).getTime()
+        );
+
+        const availableTemplateFilterOptions = workoutTemplateList.map((workoutTemplate) => ({
+          id: workoutTemplate.id,
+          name: workoutTemplate.name
+        }));
+
         if (!isCancelled) {
           setHistorySessionList(historyList);
+          setTemplateFilterOptionList(availableTemplateFilterOptions);
         }
       } catch (error) {
         console.error('Failed to load workout history', error);
         if (!isCancelled) {
           setHistorySessionList([]);
+          setTemplateFilterOptionList([]);
         }
       } finally {
         if (!isCancelled) {
@@ -98,12 +134,69 @@ export default function WorkoutHistoryScreen() {
     return 'Você ainda não registrou nenhum treino.';
   }, [isLoadingHistory]);
 
+  const filteredHistorySessionList = useMemo(() => {
+    if (selectedTemplateId === 'all') {
+      return historySessionList;
+    }
+
+    return historySessionList.filter(
+      (historySessionItem) => historySessionItem.workoutTemplateId === selectedTemplateId
+    );
+  }, [historySessionList, selectedTemplateId]);
+
   return (
     <Screen>
       <Text style={styles.screenTitle}>Histórico de treinos</Text>
 
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterListContainer}
+      >
+        <Pressable
+          style={[
+            styles.filterButton,
+            selectedTemplateId === 'all' ? styles.filterButtonActive : styles.filterButtonInactive
+          ]}
+          onPress={() => setSelectedTemplateId('all')}
+        >
+          <Text
+            style={[
+              styles.filterButtonLabel,
+              selectedTemplateId === 'all' ? styles.filterButtonLabelActive : styles.filterButtonLabelInactive
+            ]}
+          >
+            Todas
+          </Text>
+        </Pressable>
+
+        {templateFilterOptionList.map((templateFilterOption) => {
+          const isSelectedTemplate = selectedTemplateId === templateFilterOption.id;
+
+          return (
+            <Pressable
+              key={templateFilterOption.id}
+              style={[
+                styles.filterButton,
+                isSelectedTemplate ? styles.filterButtonActive : styles.filterButtonInactive
+              ]}
+              onPress={() => setSelectedTemplateId(templateFilterOption.id)}
+            >
+              <Text
+                style={[
+                  styles.filterButtonLabel,
+                  isSelectedTemplate ? styles.filterButtonLabelActive : styles.filterButtonLabelInactive
+                ]}
+              >
+                {templateFilterOption.name}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
       <FlatList
-        data={historySessionList}
+        data={filteredHistorySessionList}
         keyExtractor={(historySession) => String(historySession.id)}
         contentContainerStyle={styles.historyListContainer}
         showsVerticalScrollIndicator={false}
@@ -120,7 +213,10 @@ export default function WorkoutHistoryScreen() {
             >
               <Text style={styles.cardTitle}>{historySession.workoutTemplateName}</Text>
               <Text style={styles.cardSubtitle}>{historySession.startedAtLabel}</Text>
-              <Text style={styles.cardVolume}>{historySession.totalVolumeLabel}</Text>
+              <View style={styles.cardMetricsContainer}>
+                <Text style={styles.cardVolume}>{historySession.totalVolumeLabel}</Text>
+                <Text style={styles.cardVolume}>{historySession.setCountLabel}</Text>
+              </View>
             </Pressable>
           </Card>
         )}
@@ -140,6 +236,34 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     paddingBottom: theme.spacing.md
   },
+  filterListContainer: {
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.md
+  },
+  filterButton: {
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs
+  },
+  filterButtonActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary
+  },
+  filterButtonInactive: {
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.border
+  },
+  filterButtonLabel: {
+    fontSize: 13,
+    fontWeight: '600'
+  },
+  filterButtonLabelActive: {
+    color: theme.colors.textPrimary
+  },
+  filterButtonLabelInactive: {
+    color: theme.colors.textSecondary
+  },
   emptyStateText: {
     color: theme.colors.textSecondary,
     fontSize: 16
@@ -155,8 +279,11 @@ const styles = StyleSheet.create({
     fontSize: 14
   },
   cardVolume: {
-    marginTop: theme.spacing.sm,
     color: theme.colors.textSecondary,
     fontSize: 13
+  },
+  cardMetricsContainer: {
+    marginTop: theme.spacing.sm,
+    gap: theme.spacing.xs
   }
 });
