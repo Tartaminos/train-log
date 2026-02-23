@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
 
+import { MockHealthDataService } from '../../../src/data/health/HealthDataService';
 import { WorkoutSessionRepositorySQLite } from '../../../src/data/repositories/sqlite';
 import type { WorkoutSessionSummary } from '../../../src/domain/entities';
+import type { HealthWorkoutData } from '../../../src/domain/health/HealthData';
 import { Screen } from '../../../src/ui/components/Layout';
 import { WorkoutStoryCanvas } from '../../../src/ui/components/WorkoutStoryCanvas';
 import { theme } from '../../../src/ui/theme';
 
 const workoutSessionRepository = new WorkoutSessionRepositorySQLite();
+const healthDataService = new MockHealthDataService();
 
 export default function WorkoutStoryScreen() {
   const viewShotRef = useRef<ViewShot | null>(null);
@@ -18,7 +22,10 @@ export default function WorkoutStoryScreen() {
 
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   const [isSharingStory, setIsSharingStory] = useState(false);
+  const [isPickingPhoto, setIsPickingPhoto] = useState(false);
   const [workoutSessionSummary, setWorkoutSessionSummary] = useState<WorkoutSessionSummary | null>(null);
+  const [healthWorkoutData, setHealthWorkoutData] = useState<HealthWorkoutData | null>(null);
+  const [postWorkoutPhotoUri, setPostWorkoutPhotoUri] = useState<string | undefined>(undefined);
 
   const parsedSessionId = useMemo(() => {
     const sessionIdParam = Array.isArray(sessionId) ? sessionId[0] : sessionId;
@@ -28,25 +35,31 @@ export default function WorkoutStoryScreen() {
   useEffect(() => {
     let isCancelled = false;
 
-    const loadWorkoutSummary = async () => {
+    const loadStoryData = async () => {
       if (!Number.isInteger(parsedSessionId) || parsedSessionId <= 0) {
         setWorkoutSessionSummary(null);
+        setHealthWorkoutData(null);
         setIsLoadingSummary(false);
         return;
       }
 
       try {
         setIsLoadingSummary(true);
-        const loadedSummary = await workoutSessionRepository.getWorkoutSessionSummary(parsedSessionId);
+        const [loadedSummary, loadedHealthData] = await Promise.all([
+          workoutSessionRepository.getWorkoutSessionSummary(parsedSessionId),
+          healthDataService.getHealthDataForSession(parsedSessionId)
+        ]);
 
         if (!isCancelled) {
           setWorkoutSessionSummary(loadedSummary ?? null);
+          setHealthWorkoutData(loadedHealthData ?? null);
         }
       } catch (error) {
         console.error('Failed to load workout summary for story', error);
 
         if (!isCancelled) {
           setWorkoutSessionSummary(null);
+          setHealthWorkoutData(null);
         }
       } finally {
         if (!isCancelled) {
@@ -55,12 +68,40 @@ export default function WorkoutStoryScreen() {
       }
     };
 
-    loadWorkoutSummary();
+    loadStoryData();
 
     return () => {
       isCancelled = true;
     };
   }, [parsedSessionId]);
+
+  const handleSelectPostWorkoutPhoto = useCallback(async () => {
+    try {
+      setIsPickingPhoto(true);
+
+      const { status: permissionStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permissionStatus !== 'granted') {
+        Alert.alert('Permissão necessária', 'Permita o acesso à galeria para selecionar sua foto pós-treino.');
+        return;
+      }
+
+      const selectedImage = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+        allowsEditing: true,
+        aspect: [9, 16]
+      });
+
+      if (!selectedImage.canceled && selectedImage.assets.length > 0) {
+        setPostWorkoutPhotoUri(selectedImage.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Failed to pick post workout photo', error);
+      Alert.alert('Erro ao selecionar foto', 'Não foi possível selecionar a foto agora. Tente novamente.');
+    } finally {
+      setIsPickingPhoto(false);
+    }
+  }, []);
 
   const handleShareStory = useCallback(async () => {
     if (!viewShotRef.current || !workoutSessionSummary) {
@@ -117,11 +158,25 @@ export default function WorkoutStoryScreen() {
         style={styles.storyWrapper}
         options={{ format: 'png', quality: 1, result: 'tmpfile' }}
       >
-        <WorkoutStoryCanvas summary={workoutSessionSummary} />
+        <WorkoutStoryCanvas
+          summary={workoutSessionSummary}
+          photoUri={postWorkoutPhotoUri}
+          healthData={healthWorkoutData}
+        />
       </ViewShot>
 
       <Pressable
-        style={[styles.shareButton, isSharingStory && styles.shareButtonDisabled]}
+        style={[styles.secondaryButton, isPickingPhoto && styles.buttonDisabled]}
+        onPress={handleSelectPostWorkoutPhoto}
+        disabled={isPickingPhoto}
+      >
+        <Text style={styles.secondaryButtonText}>
+          {isPickingPhoto ? 'Abrindo galeria...' : 'Selecionar foto pós-treino'}
+        </Text>
+      </Pressable>
+
+      <Pressable
+        style={[styles.shareButton, isSharingStory && styles.buttonDisabled]}
         onPress={handleShareStory}
         disabled={isSharingStory}
       >
@@ -148,11 +203,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.md
   },
-  shareButtonDisabled: {
+  secondaryButton: {
+    borderRadius: theme.radius.md,
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.surface
+  },
+  buttonDisabled: {
     opacity: 0.8
   },
   shareButtonText: {
     color: theme.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '700'
+  },
+  secondaryButtonText: {
+    color: theme.colors.primary,
     fontSize: 16,
     fontWeight: '700'
   },

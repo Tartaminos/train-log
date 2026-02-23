@@ -1,11 +1,13 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import type { WorkoutSessionSummary } from '../../domain/entities';
+import type { HealthWorkoutData } from '../../domain/health/HealthData';
 import { theme } from '../theme';
 
 type WorkoutStoryCanvasProps = {
   summary: WorkoutSessionSummary;
   photoUri?: string;
+  healthData?: HealthWorkoutData | null;
 };
 
 function formatWorkoutDate(workoutDate: Date): string {
@@ -25,7 +27,18 @@ function formatTotalVolume(totalVolume: number): string {
   });
 }
 
-export function WorkoutStoryCanvas({ summary, photoUri }: WorkoutStoryCanvasProps) {
+function hasHealthData(healthData?: HealthWorkoutData | null): boolean {
+  return Boolean(
+    healthData &&
+      (healthData.estimatedCalories !== undefined ||
+        healthData.averageHeartRate !== undefined ||
+        healthData.maxHeartRate !== undefined)
+  );
+}
+
+export function WorkoutStoryCanvas({ summary, photoUri, healthData }: WorkoutStoryCanvasProps) {
+  const shouldRenderHealthSection = hasHealthData(healthData);
+
   return (
     <View style={styles.canvasContainer}>
       <View style={styles.headerContainer}>
@@ -48,6 +61,20 @@ export function WorkoutStoryCanvas({ summary, photoUri }: WorkoutStoryCanvasProp
           <Text style={styles.metricLabel}>Data</Text>
           <Text style={styles.metricValue}>{formatWorkoutDate(summary.startedAt)}</Text>
         </View>
+
+        {shouldRenderHealthSection && (
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Saúde</Text>
+            {healthData?.estimatedCalories !== undefined && (
+              <Text style={styles.healthDataValue}>Calorias estimadas: {healthData.estimatedCalories} kcal</Text>
+            )}
+            {(healthData?.averageHeartRate !== undefined || healthData?.maxHeartRate !== undefined) && (
+              <Text style={styles.healthDataValue}>
+                FC média/máxima: {healthData?.averageHeartRate ?? '-'} / {healthData?.maxHeartRate ?? '-'} bpm
+              </Text>
+            )}
+          </View>
+        )}
       </View>
 
       <View style={styles.photoContainer}>
@@ -107,6 +134,11 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 28,
     fontWeight: '700'
+  },
+  healthDataValue: {
+    color: theme.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '600'
   },
   photoContainer: {
     height: 190,
