@@ -50,7 +50,7 @@ export default function WorkoutHistoryDetailScreen() {
 
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [workoutSession, setWorkoutSession] = useState<WorkoutSession | null>(null);
-  const [workoutTemplateName, setWorkoutTemplateName] = useState('Treino sem ficha');
+  const [workoutTemplateName, setWorkoutTemplateName] = useState('Treino sem nome');
   const [sessionSetList, setSessionSetList] = useState<WorkoutSet[]>([]);
   const [sessionTotalVolume, setSessionTotalVolume] = useState(0);
 
@@ -67,7 +67,7 @@ export default function WorkoutHistoryDetailScreen() {
         setWorkoutSession(null);
         setSessionSetList([]);
         setSessionTotalVolume(0);
-        setWorkoutTemplateName('Treino sem ficha');
+        setWorkoutTemplateName('Treino sem nome');
         setIsLoadingSession(false);
         return;
       }
@@ -82,7 +82,7 @@ export default function WorkoutHistoryDetailScreen() {
             setWorkoutSession(null);
             setSessionSetList([]);
             setSessionTotalVolume(0);
-            setWorkoutTemplateName('Treino sem ficha');
+            setWorkoutTemplateName('Treino sem nome');
           }
           return;
         }
@@ -99,7 +99,7 @@ export default function WorkoutHistoryDetailScreen() {
           setWorkoutSession(loadedSession);
           setSessionSetList(loadedSetList);
           setSessionTotalVolume(loadedTotalVolume);
-          setWorkoutTemplateName(loadedWorkoutTemplate?.name ?? 'Treino sem ficha');
+          setWorkoutTemplateName(loadedWorkoutTemplate?.name ?? 'Treino sem nome');
         }
       } catch (error) {
         console.error('Failed to load workout session details', error);
@@ -107,7 +107,7 @@ export default function WorkoutHistoryDetailScreen() {
           setWorkoutSession(null);
           setSessionSetList([]);
           setSessionTotalVolume(0);
-          setWorkoutTemplateName('Treino sem ficha');
+          setWorkoutTemplateName('Treino sem nome');
         }
       } finally {
         if (!isCancelled) {

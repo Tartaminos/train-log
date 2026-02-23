@@ -67,7 +67,7 @@ export default function HomeScreen() {
 
   return (
     <Screen>
-      <Text style={styles.screenTitle}>Minhas Fichas</Text>
+      <Text style={styles.screenTitle}>Meus Treinos</Text>
 
       <TouchableOpacity style={styles.historyButton} onPress={() => router.push('/history')}>
         <Text style={styles.historyButtonText}>Histórico</Text>
@@ -80,7 +80,7 @@ export default function HomeScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.listContainer}>
           {templateList.length === 0 ? (
-            <Text style={styles.emptyStateText}>Nenhuma ficha cadastrada.</Text>
+            <Text style={styles.emptyStateText}>Nenhum treino cadastrado.</Text>
           ) : (
             templateList.map((template) => (
               <Card key={template.id}>
@@ -102,7 +102,7 @@ export default function HomeScreen() {
       )}
 
       <TouchableOpacity style={styles.createButton} onPress={() => router.push('/template/new')}>
-        <Text style={styles.createButtonText}>Nova Ficha</Text>
+        <Text style={styles.createButtonText}>Novo Treino</Text>
       </TouchableOpacity>
     </Screen>
   );
