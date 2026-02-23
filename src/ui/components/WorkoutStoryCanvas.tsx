@@ -11,13 +11,6 @@ type WorkoutStoryCanvasProps = {
   isHealthIntegrationEnabled?: boolean;
 };
 
-type MetricCardData = {
-  key: string;
-  label: string;
-  value: string;
-  valueStyle?: 'default' | 'health';
-};
-
 function formatWorkoutDate(workoutDate: Date): string {
   const parsedDate = workoutDate instanceof Date ? workoutDate : new Date(workoutDate);
 
@@ -61,35 +54,8 @@ export function WorkoutStoryCanvas({
   healthData,
   isHealthIntegrationEnabled = false
 }: WorkoutStoryCanvasProps) {
-  const shouldRenderPostWorkoutPhoto = Boolean(photoUri);
-  const shouldRenderHealthCard = isHealthIntegrationEnabled && hasHealthData(healthData);
-
-  const metricCards: MetricCardData[] = [
-    {
-      key: 'duration',
-      label: 'Duração',
-      value: `${summary.durationInMinutes} min`
-    },
-    {
-      key: 'volume',
-      label: 'Volume',
-      value: `${formatTotalVolume(summary.totalVolume)} kg`
-    },
-    {
-      key: 'date',
-      label: 'Data',
-      value: formatWorkoutDate(summary.startedAt)
-    }
-  ];
-
-  if (shouldRenderHealthCard && healthData) {
-    metricCards.push({
-      key: 'health',
-      label: 'Saúde',
-      value: buildHealthSummaryText(healthData),
-      valueStyle: 'health'
-    });
-  }
+  const workoutInfoText = `Duração: ${summary.durationInMinutes} min • Volume: ${formatTotalVolume(summary.totalVolume)} kg • Data: ${formatWorkoutDate(summary.startedAt)}`;
+  const shouldRenderHealthSummary = isHealthIntegrationEnabled && hasHealthData(healthData);
 
   return (
     <View style={styles.canvasContainer}>
@@ -99,25 +65,22 @@ export function WorkoutStoryCanvas({
       </View>
 
       <View style={styles.mainSectionContainer}>
-        <View style={styles.metricsGrid}>
-          {metricCards.map((metricCard) => {
-            const metricValueStyle =
-              metricCard.valueStyle === 'health' ? styles.healthDataValue : styles.metricValue;
-
-            return (
-              <View key={metricCard.key} style={styles.metricCard}>
-                <Text style={styles.metricLabel}>{metricCard.label}</Text>
-                <Text style={metricValueStyle}>{metricCard.value}</Text>
-              </View>
-            );
-          })}
+        <View style={styles.workoutInfoCard}>
+          <Text style={styles.workoutInfoText}>{workoutInfoText}</Text>
+          {shouldRenderHealthSummary && healthData ? (
+            <Text style={styles.healthInfoText}>{buildHealthSummaryText(healthData)}</Text>
+          ) : null}
         </View>
 
-        {shouldRenderPostWorkoutPhoto && (
-          <View style={styles.photoContainer}>
-            <Image source={{ uri: photoUri }} resizeMode="cover" style={styles.photoImage} />
-          </View>
-        )}
+        <View style={styles.postWorkoutPhotoContainer}>
+          {photoUri ? (
+            <Image source={{ uri: photoUri }} resizeMode="cover" style={styles.postWorkoutPhotoImage} />
+          ) : (
+            <View style={styles.postWorkoutPhotoPlaceholder}>
+              <Text style={styles.postWorkoutPhotoPlaceholderText}>Foto pós-treino</Text>
+            </View>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -132,7 +95,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     padding: theme.spacing.lg,
-    gap: theme.spacing.lg,
+    gap: theme.spacing.md,
     overflow: 'hidden'
   },
   headerContainer: {
@@ -140,64 +103,68 @@ const styles = StyleSheet.create({
   },
   brandTitle: {
     color: theme.colors.primary,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '800',
-    letterSpacing: 1.2
+    letterSpacing: 1.1
   },
   brandSubtitle: {
     color: theme.colors.textSecondary,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500'
   },
   mainSectionContainer: {
     flex: 1,
+    alignItems: 'center',
     gap: theme.spacing.md
   },
-  metricsGrid: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.md
-  },
-  metricCard: {
-    width: '47%',
-    minHeight: 120,
-    flexGrow: 1,
+  workoutInfoCard: {
+    width: '100%',
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
-    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
     gap: theme.spacing.xs
   },
-  metricLabel: {
-    color: theme.colors.textSecondary,
-    fontSize: 14,
-    fontWeight: '500'
-  },
-  metricValue: {
+  workoutInfoText: {
     color: theme.colors.textPrimary,
-    fontSize: 24,
-    fontWeight: '700'
-  },
-  healthDataValue: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    lineHeight: 20
+    lineHeight: 19,
+    textAlign: 'center'
   },
-  photoContainer: {
-    flex: 0.45,
-    minHeight: 180,
+  healthInfoText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 18,
+    textAlign: 'center'
+  },
+  postWorkoutPhotoContainer: {
+    width: '74%',
+    aspectRatio: 1,
     borderRadius: theme.radius.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
     overflow: 'hidden'
   },
-  photoImage: {
+  postWorkoutPhotoImage: {
     width: '100%',
     height: '100%'
+  },
+  postWorkoutPhotoPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.textSecondary,
+    borderStyle: 'dashed'
+  },
+  postWorkoutPhotoPlaceholderText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '500'
   }
 });

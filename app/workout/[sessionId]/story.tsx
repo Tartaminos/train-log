@@ -99,7 +99,7 @@ export default function WorkoutStoryScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 1,
         allowsEditing: true,
-        aspect: [9, 16]
+        aspect: [1, 1]
       });
 
       if (!capturedImage.canceled && capturedImage.assets.length > 0) {
