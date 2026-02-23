@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Camera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
@@ -89,6 +90,18 @@ export default function WorkoutStoryScreen() {
     try {
       setIsCapturingPhoto(true);
 
+      const currentCameraPermission = await Camera.getCameraPermissionsAsync();
+      let resolvedCameraPermission = currentCameraPermission;
+
+      if (!currentCameraPermission.granted) {
+        resolvedCameraPermission = await Camera.requestCameraPermissionsAsync();
+      }
+
+      if (!resolvedCameraPermission.granted) {
+        Alert.alert('Permissão necessária', 'Permita o acesso à câmera para tirar sua foto pós-treino.');
+        return;
+      }
+
       const capturedImage = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 1,
@@ -101,7 +114,7 @@ export default function WorkoutStoryScreen() {
       }
     } catch (error) {
       console.error('Failed to capture post workout photo', error);
-      Alert.alert('Permissão necessária', 'Permita o acesso à câmera para tirar sua foto pós-treino.');
+      Alert.alert('Erro ao tirar foto', 'Não foi possível tirar a foto agora. Tente novamente.');
     } finally {
       setIsCapturingPhoto(false);
     }
