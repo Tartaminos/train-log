@@ -484,9 +484,6 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.md,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.sm,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     gap: theme.spacing.sm
   },
   exerciseTextContent: {
@@ -502,7 +499,10 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm
   },
   exerciseActionsContainer: {
-    gap: theme.spacing.xs
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: theme.spacing.sm
   },
   reorderExerciseButton: {
     backgroundColor: theme.colors.card,
