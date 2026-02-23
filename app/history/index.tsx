@@ -10,6 +10,7 @@ import {
 import type { WorkoutSession } from '../../src/domain/entities';
 import type { WorkoutTemplate } from '../../src/domain/entities/workout-template';
 import { Card, Screen } from '../../src/ui/components/Layout';
+import { WorkoutVolumeChart } from '../../src/ui/components/WorkoutVolumeChart';
 import { theme } from '../../src/ui/theme';
 
 type HistorySessionListItem = {
@@ -18,6 +19,7 @@ type HistorySessionListItem = {
   workoutTemplateName: string;
   startedAt: string;
   startedAtLabel: string;
+  totalVolume: number;
   totalVolumeLabel: string;
   setCountLabel: string;
 };
@@ -86,6 +88,7 @@ export default function WorkoutHistoryScreen() {
               workoutTemplateName: workoutTemplate?.name ?? 'Treino sem nome',
               startedAt: workoutSession.startedAt,
               startedAtLabel: formatSessionDate(workoutSession.startedAt),
+              totalVolume,
               totalVolumeLabel: `Volume: ${formatVolume(totalVolume)} kg`,
               setCountLabel: `Séries: ${workoutSetList.length}`
             };
@@ -143,6 +146,20 @@ export default function WorkoutHistoryScreen() {
       (historySessionItem) => historySessionItem.workoutTemplateId === selectedTemplateId
     );
   }, [historySessionList, selectedTemplateId]);
+
+  const workoutVolumePointList = useMemo(
+    () =>
+      [...filteredHistorySessionList]
+        .sort(
+          (firstSession, secondSession) =>
+            new Date(firstSession.startedAt).getTime() - new Date(secondSession.startedAt).getTime()
+        )
+        .map((historySessionItem) => ({
+          date: historySessionItem.startedAt,
+          totalVolume: historySessionItem.totalVolume
+        })),
+    [filteredHistorySessionList]
+  );
 
   return (
     <Screen>
@@ -206,6 +223,12 @@ export default function WorkoutHistoryScreen() {
         keyExtractor={(historySession) => String(historySession.id)}
         contentContainerStyle={styles.historyListContainer}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <View style={styles.chartSectionContainer}>
+            <Text style={styles.chartSectionTitle}>Evolução do volume total (kg)</Text>
+            <WorkoutVolumeChart pointList={workoutVolumePointList} />
+          </View>
+        }
         ListEmptyComponent={<Text style={styles.emptyStateText}>{emptyStateText}</Text>}
         renderItem={({ item: historySession }) => (
           <Card>
@@ -256,6 +279,15 @@ const styles = StyleSheet.create({
   historyListContainer: {
     gap: theme.spacing.sm,
     paddingBottom: theme.spacing.md
+  },
+  chartSectionContainer: {
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.sm
+  },
+  chartSectionTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '700'
   },
   filterBarContainer: {
     flexDirection: 'row',
