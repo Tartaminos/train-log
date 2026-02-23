@@ -145,7 +145,7 @@ export default function ExercisePerformanceScreen() {
         </View>
 
         <View style={styles.chartSectionContainer}>
-          <Text style={styles.sectionTitle}>Evolução da carga</Text>
+          <Text style={styles.sectionTitle}>Evolução de carga (kg)</Text>
           <ExerciseLoadChart
             pointList={exercisePerformanceSummary.entriesChronological.map((entryItem) => ({
               date: entryItem.sessionDate,
