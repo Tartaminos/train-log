@@ -140,7 +140,7 @@ export default function EditTemplateScreen() {
     const trimmedTemplateName = templateName.trim();
 
     if (!trimmedTemplateName) {
-      setTemplateNameErrorMessage('Nome da ficha é obrigatório.');
+      setTemplateNameErrorMessage('Nome do treino é obrigatório.');
       setSuccessMessage(null);
       return;
     }
@@ -193,10 +193,10 @@ export default function EditTemplateScreen() {
         return;
       }
 
-      setFormErrorMessage('Não foi possível excluir a ficha. Tente novamente.');
+      setFormErrorMessage('Não foi possível excluir o treino. Tente novamente.');
     } catch (error) {
       console.error('Failed to delete template', error);
-      setFormErrorMessage('Erro ao excluir a ficha. Tente novamente em instantes.');
+      setFormErrorMessage('Erro ao excluir o treino. Tente novamente em instantes.');
     } finally {
       setIsDeletingTemplate(false);
     }
@@ -268,7 +268,7 @@ export default function EditTemplateScreen() {
   if (isLoadingTemplate) {
     return (
       <Screen>
-        <Text style={styles.screenTitle}>Editar ficha</Text>
+        <Text style={styles.screenTitle}>Editar treino</Text>
         <Text style={styles.secondaryText}>Carregando...</Text>
       </Screen>
     );
@@ -277,8 +277,8 @@ export default function EditTemplateScreen() {
   if (templateNotFound || !templateId) {
     return (
       <Screen>
-        <Text style={styles.screenTitle}>Editar ficha</Text>
-        <Text style={styles.errorMessage}>Ficha não encontrada.</Text>
+        <Text style={styles.screenTitle}>Editar treino</Text>
+        <Text style={styles.errorMessage}>Treino não encontrado.</Text>
         <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace('/')}>
           <Text style={styles.primaryButtonText}>Voltar para Home</Text>
         </TouchableOpacity>
@@ -288,12 +288,12 @@ export default function EditTemplateScreen() {
 
   return (
     <Screen isScrollable contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.screenTitle}>Editar ficha</Text>
+        <Text style={styles.screenTitle}>Editar treino</Text>
 
         <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Dados da ficha</Text>
+          <Text style={styles.sectionTitle}>Dados do treino</Text>
 
-          <Text style={styles.inputLabel}>Nome da ficha *</Text>
+          <Text style={styles.inputLabel}>Nome do treino *</Text>
           <TextInput
             style={[styles.textInput, templateNameErrorMessage && styles.textInputError]}
             value={templateName}
@@ -427,7 +427,7 @@ export default function EditTemplateScreen() {
             disabled={isDeletingTemplate}
           >
             <Text style={styles.deleteButtonText}>
-              {isDeletingTemplate ? 'Excluindo...' : 'Excluir ficha'}
+              {isDeletingTemplate ? 'Excluindo...' : 'Excluir treino'}
             </Text>
           </TouchableOpacity>
 

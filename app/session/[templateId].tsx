@@ -94,7 +94,7 @@ export default function WorkoutSessionScreen() {
     const parsedTemplateId = Number(Array.isArray(templateId) ? templateId[0] : templateId);
 
     if (!Number.isInteger(parsedTemplateId) || parsedTemplateId <= 0) {
-      setScreenErrorMessage('Ficha inválida para iniciar o treino.');
+      setScreenErrorMessage('Treino inválido para iniciar o treino.');
       setIsInitializing(false);
       return;
     }
@@ -109,7 +109,7 @@ export default function WorkoutSessionScreen() {
         const foundWorkoutTemplate = await workoutTemplateRepository.getTemplateById(parsedTemplateId);
 
         if (!foundWorkoutTemplate) {
-          setScreenErrorMessage('Ficha não encontrada.');
+          setScreenErrorMessage('Treino não encontrado.');
           return;
         }
 

@@ -78,7 +78,7 @@ export default function NewTemplateScreen() {
     const trimmedTemplateName = templateName.trim();
 
     if (!trimmedTemplateName) {
-      setTemplateNameErrorMessage('Nome da ficha é obrigatório.');
+      setTemplateNameErrorMessage('Nome do treino é obrigatório.');
       return;
     }
 
@@ -109,7 +109,7 @@ export default function NewTemplateScreen() {
       router.replace('/');
     } catch (error) {
       console.error('Failed to create workout template', error);
-      setErrorMessage('Não foi possível salvar a ficha. Tente novamente.');
+      setErrorMessage('Não foi possível salvar o treino. Tente novamente.');
     } finally {
       setIsSavingTemplate(false);
     }
@@ -117,13 +117,13 @@ export default function NewTemplateScreen() {
 
   return (
     <Screen isScrollable contentContainerStyle={styles.contentContainer}>
-      <Text style={styles.screenTitle}>Nova ficha</Text>
+      <Text style={styles.screenTitle}>Novo treino</Text>
 
       <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Dados da ficha</Text>
+        <Text style={styles.sectionTitle}>Dados do treino</Text>
 
         <View style={styles.formGroup}>
-          <Text style={styles.inputLabel}>Nome da ficha *</Text>
+          <Text style={styles.inputLabel}>Nome do treino *</Text>
           <TextInput
             style={[styles.textInput, templateNameErrorMessage && styles.textInputError]}
             value={templateName}
@@ -157,7 +157,7 @@ export default function NewTemplateScreen() {
       </View>
 
       <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Exercícios da ficha</Text>
+        <Text style={styles.sectionTitle}>Exercícios do treino</Text>
 
         <View style={styles.formGroup}>
           <Text style={styles.inputLabel}>Nome do exercício *</Text>
@@ -254,7 +254,7 @@ export default function NewTemplateScreen() {
             disabled={isSavingTemplate}
           >
             <Text style={styles.primaryButtonText}>
-              {isSavingTemplate ? 'Salvando...' : 'Salvar ficha'}
+              {isSavingTemplate ? 'Salvando...' : 'Salvar treino'}
             </Text>
           </TouchableOpacity>
         </View>
