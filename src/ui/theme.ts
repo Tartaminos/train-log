@@ -4,6 +4,7 @@ export const theme = {
     surface: '#1A1D23',
     card: '#222630',
     primary: '#66b939ff',
+    primaryLight: '#8FD26A',
     secondary: '#457B9D',
     textPrimary: '#F1FAEE',
     textSecondary: '#A8B2C1',
