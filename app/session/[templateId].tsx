@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -31,6 +31,7 @@ type ExerciseInputState = {
 type ExerciseSetMap = Record<number, WorkoutSet[]>;
 type ExerciseInputMap = Record<number, ExerciseInputState>;
 type ExerciseLoadingMap = Record<number, boolean>;
+type ExerciseSuccessMessageMap = Record<number, string | null>;
 
 function groupSetsByTemplateExercise(workoutSetList: WorkoutSet[]): ExerciseSetMap {
   return workoutSetList.reduce<ExerciseSetMap>((currentMap, workoutSet) => {
@@ -64,6 +65,30 @@ export default function WorkoutSessionScreen() {
   const [exerciseSetMap, setExerciseSetMap] = useState<ExerciseSetMap>({});
   const [exerciseInputMap, setExerciseInputMap] = useState<ExerciseInputMap>({});
   const [exerciseLoadingMap, setExerciseLoadingMap] = useState<ExerciseLoadingMap>({});
+  const [exerciseSuccessMessageMap, setExerciseSuccessMessageMap] =
+    useState<ExerciseSuccessMessageMap>({});
+
+  const successMessageTimeoutMapRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+
+  const showExerciseSuccessMessage = (exerciseId: number) => {
+    const existingTimeoutId = successMessageTimeoutMapRef.current[exerciseId];
+
+    if (existingTimeoutId) {
+      clearTimeout(existingTimeoutId);
+    }
+
+    setExerciseSuccessMessageMap((currentSuccessMessageMap) => ({
+      ...currentSuccessMessageMap,
+      [exerciseId]: 'Série adicionada'
+    }));
+
+    successMessageTimeoutMapRef.current[exerciseId] = setTimeout(() => {
+      setExerciseSuccessMessageMap((currentSuccessMessageMap) => ({
+        ...currentSuccessMessageMap,
+        [exerciseId]: null
+      }));
+    }, 3000);
+  };
 
   useEffect(() => {
     const parsedTemplateId = Number(Array.isArray(templateId) ? templateId[0] : templateId);
@@ -107,6 +132,23 @@ export default function WorkoutSessionScreen() {
         setWorkoutSessionId(newWorkoutSession.id);
         setSessionStartedAt(newWorkoutSession.startedAt);
         setExerciseSetMap(groupSetsByTemplateExercise(existingWorkoutSets));
+        setExerciseInputMap(
+          foundTemplateExercises.reduce<ExerciseInputMap>((currentInputMap, templateExercise) => {
+            return {
+              ...currentInputMap,
+              [templateExercise.id]: {
+                load:
+                  templateExercise.defaultLoad !== null && templateExercise.defaultLoad !== undefined
+                    ? String(templateExercise.defaultLoad)
+                    : '',
+                reps:
+                  templateExercise.defaultReps !== null && templateExercise.defaultReps !== undefined
+                    ? String(templateExercise.defaultReps)
+                    : ''
+              }
+            };
+          }, {})
+        );
       } catch (error) {
         console.error('Failed to initialize workout session screen', error);
         if (!isCancelled) {
@@ -123,6 +165,10 @@ export default function WorkoutSessionScreen() {
 
     return () => {
       isCancelled = true;
+
+      Object.values(successMessageTimeoutMapRef.current).forEach((timeoutId) => {
+        clearTimeout(timeoutId);
+      });
     };
   }, [templateId]);
 
@@ -139,6 +185,38 @@ export default function WorkoutSessionScreen() {
         [fieldName]: inputValue
       }
     }));
+
+    if (exerciseSuccessMessageMap[exerciseId]) {
+      setExerciseSuccessMessageMap((currentSuccessMessageMap) => ({
+        ...currentSuccessMessageMap,
+        [exerciseId]: null
+      }));
+    }
+  };
+
+  const handleLoadQuickIncrement = (exerciseId: number, incrementAmount: number) => {
+    setExerciseInputMap((currentInputMap) => {
+      const currentLoadValue = currentInputMap[exerciseId]?.load ?? '';
+      const parsedCurrentLoad = Number(currentLoadValue.replace(',', '.'));
+      const updatedLoadValue = Number.isFinite(parsedCurrentLoad)
+        ? String(parsedCurrentLoad + incrementAmount)
+        : String(incrementAmount);
+
+      return {
+        ...currentInputMap,
+        [exerciseId]: {
+          load: updatedLoadValue,
+          reps: currentInputMap[exerciseId]?.reps ?? ''
+        }
+      };
+    });
+
+    if (exerciseSuccessMessageMap[exerciseId]) {
+      setExerciseSuccessMessageMap((currentSuccessMessageMap) => ({
+        ...currentSuccessMessageMap,
+        [exerciseId]: null
+      }));
+    }
   };
 
   const handleAddSet = async (templateExercise: TemplateExercise) => {
@@ -183,10 +261,11 @@ export default function WorkoutSessionScreen() {
       setExerciseInputMap((currentInputMap) => ({
         ...currentInputMap,
         [templateExercise.id]: {
-          load: '',
+          load: currentInputMap[templateExercise.id]?.load ?? '',
           reps: ''
         }
       }));
+      showExerciseSuccessMessage(templateExercise.id);
     } catch (error) {
       console.error('Failed to add workout set', error);
       setScreenErrorMessage('Não foi possível adicionar a série.');
@@ -245,30 +324,66 @@ export default function WorkoutSessionScreen() {
 
   return (
     <Screen isScrollable contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.screenTitle}>{workoutTemplate.name}</Text>
-        <Text style={styles.secondaryText}>Início: {new Date(sessionStartedAt).toLocaleString()}</Text>
+      <Text style={styles.screenTitle}>{workoutTemplate.name}</Text>
+      <Text style={styles.secondaryText}>Início: {new Date(sessionStartedAt).toLocaleString()}</Text>
 
-        {templateExerciseList.map((templateExercise) => {
-          const currentExerciseInput = exerciseInputMap[templateExercise.id] ?? { load: '', reps: '' };
-          const currentExerciseSetList = exerciseSetMap[templateExercise.id] ?? [];
-          const isAddingSet = Boolean(exerciseLoadingMap[templateExercise.id]);
+      {templateExerciseList.map((templateExercise) => {
+        const currentExerciseInput = exerciseInputMap[templateExercise.id] ?? { load: '', reps: '' };
+        const currentExerciseSetList = exerciseSetMap[templateExercise.id] ?? [];
+        const isAddingSet = Boolean(exerciseLoadingMap[templateExercise.id]);
 
-          return (
-            <View key={templateExercise.id} style={styles.exerciseCard}>
-              <Text style={styles.exerciseName}>{templateExercise.name}</Text>
-              {templateExercise.machine ? (
-                <Text style={styles.exerciseMachine}>{templateExercise.machine}</Text>
-              ) : null}
+        return (
+          <View key={templateExercise.id} style={styles.exerciseCard}>
+            <Text style={styles.exerciseName}>{templateExercise.name}</Text>
+            {templateExercise.machine ? (
+              <Text style={styles.exerciseMachine}>{templateExercise.machine}</Text>
+            ) : null}
+
+            <View style={styles.exerciseSection}>
+              <Text style={styles.sectionTitle}>Séries salvas</Text>
+              <View style={styles.setListContainer}>
+                {currentExerciseSetList.length === 0 ? (
+                  <Text style={styles.secondaryText}>Nenhuma série registrada.</Text>
+                ) : (
+                  currentExerciseSetList.map((workoutSet) => (
+                    <Text key={workoutSet.id} style={styles.setText}>
+                      Série {workoutSet.setIndex} — {workoutSet.load} kg x {workoutSet.reps}
+                    </Text>
+                  ))
+                )}
+              </View>
+            </View>
+
+            <View style={styles.exerciseSection}>
+              <Text style={styles.sectionTitle}>Adicionar série</Text>
 
               <View style={styles.setInputRow}>
-                <TextInput
-                  style={[styles.textInput, styles.smallInput]}
-                  value={currentExerciseInput.load}
-                  onChangeText={(value) => handleExerciseInputChange(templateExercise.id, 'load', value)}
-                  placeholder="Carga (kg)"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  keyboardType="numeric"
-                />
+                <View style={styles.loadInputContainer}>
+                  <TextInput
+                    style={[styles.textInput, styles.smallInput]}
+                    value={currentExerciseInput.load}
+                    onChangeText={(value) => handleExerciseInputChange(templateExercise.id, 'load', value)}
+                    placeholder="Carga (kg)"
+                    placeholderTextColor={theme.colors.textSecondary}
+                    keyboardType="numeric"
+                  />
+
+                  <View style={styles.quickActionsContainer}>
+                    <Pressable
+                      style={styles.quickActionButton}
+                      onPress={() => handleLoadQuickIncrement(templateExercise.id, 2.5)}
+                    >
+                      <Text style={styles.quickActionButtonText}>+2.5</Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={styles.quickActionButton}
+                      onPress={() => handleLoadQuickIncrement(templateExercise.id, 5)}
+                    >
+                      <Text style={styles.quickActionButtonText}>+5</Text>
+                    </Pressable>
+                  </View>
+                </View>
 
                 <TextInput
                   style={[styles.textInput, styles.smallInput]}
@@ -290,41 +405,35 @@ export default function WorkoutSessionScreen() {
                 </Text>
               </Pressable>
 
-              <View style={styles.setListContainer}>
-                {currentExerciseSetList.length === 0 ? (
-                  <Text style={styles.secondaryText}>Nenhuma série registrada.</Text>
-                ) : (
-                  currentExerciseSetList.map((workoutSet) => (
-                    <Text key={workoutSet.id} style={styles.setText}>
-                      Série {workoutSet.setIndex} — {workoutSet.load} kg x {workoutSet.reps}
-                    </Text>
-                  ))
-                )}
-              </View>
+              {exerciseSuccessMessageMap[templateExercise.id] ? (
+                <Text style={styles.successMessage}>{exerciseSuccessMessageMap[templateExercise.id]}</Text>
+              ) : null}
             </View>
-          );
-        })}
+          </View>
+        );
+      })}
 
-        {screenErrorMessage ? <Text style={styles.errorMessage}>{screenErrorMessage}</Text> : null}
+      {screenErrorMessage ? <Text style={styles.errorMessage}>{screenErrorMessage}</Text> : null}
 
-        <View style={styles.mainActionsContainer}>
-          <Pressable
-            style={[styles.primaryButton, isFinishingWorkout && styles.disabledButton]}
-            onPress={handleFinishWorkout}
-            disabled={isFinishingWorkout}
-          >
-            <Text style={styles.primaryButtonText}>
-              {isFinishingWorkout ? 'Finalizando...' : 'Finalizar treino'}
-            </Text>
-          </Pressable>
-        </View>
+      <View style={styles.mainActionsContainer}>
+        <Pressable
+          style={[styles.primaryButton, isFinishingWorkout && styles.disabledButton]}
+          onPress={handleFinishWorkout}
+          disabled={isFinishingWorkout}
+        >
+          <Text style={styles.primaryButtonText}>
+            {isFinishingWorkout ? 'Finalizando...' : 'Finalizar treino'}
+          </Text>
+        </Pressable>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   contentContainer: {
-    gap: theme.spacing.md
+    gap: theme.spacing.md,
+    paddingBottom: theme.spacing.xl
   },
   screenTitle: {
     fontSize: 28,
@@ -352,9 +461,42 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 14
   },
+  exerciseSection: {
+    gap: theme.spacing.sm,
+    paddingTop: theme.spacing.xs
+  },
+  sectionTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600'
+  },
   setInputRow: {
     flexDirection: 'row',
-    gap: theme.spacing.sm
+    gap: theme.spacing.sm,
+    alignItems: 'flex-start'
+  },
+  loadInputContainer: {
+    flex: 1,
+    gap: theme.spacing.xs
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    gap: theme.spacing.xs
+  },
+  quickActionButton: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.sm,
+    minHeight: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.sm
+  },
+  quickActionButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '600'
   },
   textInput: {
     backgroundColor: theme.colors.surface,
@@ -399,5 +541,9 @@ const styles = StyleSheet.create({
   errorMessage: {
     color: theme.colors.error,
     fontSize: 14
+  },
+  successMessage: {
+    color: theme.colors.textSecondary,
+    fontSize: 13
   }
 });
