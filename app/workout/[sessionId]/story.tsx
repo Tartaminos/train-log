@@ -105,6 +105,19 @@ export default function WorkoutStoryScreen() {
   }, [parsedSessionId]);
 
   const handleCapturePostWorkoutPhoto = useCallback(async () => {
+    const storyPhotoPickerOptions: ImagePicker.ImagePickerOptions = {
+      mediaTypes: 'images',
+      quality: 1,
+      allowsEditing: true,
+      aspect: [9, 16]
+    };
+
+    const fallbackCameraOptions: ImagePicker.ImagePickerOptions = {
+      mediaTypes: 'images',
+      quality: 1,
+      allowsEditing: false
+    };
+
     try {
       setIsCapturingPhoto(true);
 
@@ -114,14 +127,18 @@ export default function WorkoutStoryScreen() {
         return;
       }
 
-      const storyPhotoPickerOptions: ImagePicker.ImagePickerOptions = {
-        mediaTypes: ['images'],
-        quality: 1,
-        allowsEditing: true,
-        aspect: [9, 16]
-      };
+      console.log('Opening camera for workout story...');
 
-      const cameraResult = await ImagePicker.launchCameraAsync(storyPhotoPickerOptions);
+      let cameraResult: ImagePicker.ImagePickerResult;
+
+      try {
+        cameraResult = await ImagePicker.launchCameraAsync(storyPhotoPickerOptions);
+      } catch (cameraError) {
+        console.log('Error opening camera with editing enabled', cameraError);
+        cameraResult = await ImagePicker.launchCameraAsync(fallbackCameraOptions);
+      }
+
+      console.log('Camera result', cameraResult);
 
       if (cameraResult.canceled) {
         return;
@@ -135,7 +152,7 @@ export default function WorkoutStoryScreen() {
 
       setPostWorkoutPhotoUri(capturedPhotoUri);
     } catch (error) {
-      console.log(error);
+      console.log('Error opening camera', error);
       console.error('Failed to capture post workout photo', error);
       Alert.alert('Erro ao tirar foto', 'Não foi possível tirar a foto agora. Tente novamente.');
     } finally {
