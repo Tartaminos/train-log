@@ -54,9 +54,9 @@ export function WorkoutStoryCanvas({
   healthData,
   isHealthIntegrationEnabled = false
 }: WorkoutStoryCanvasProps) {
-  const workoutInfoText = `Duração: ${summary.durationInMinutes} min
-  Volume: ${formatTotalVolume(summary.totalVolume)} kg
-  Data: ${formatWorkoutDate(summary.startedAt)}`;
+  const workoutDurationText = `Duração: ${summary.durationInMinutes} min`;
+  const workoutVolumeText = `Volume: ${formatTotalVolume(summary.totalVolume)} kg`;
+  const workoutDateText = `Data: ${formatWorkoutDate(summary.startedAt)}`;
   const shouldRenderHealthSummary = isHealthIntegrationEnabled && hasHealthData(healthData);
 
   return (
@@ -68,9 +68,15 @@ export function WorkoutStoryCanvas({
 
       <View style={styles.mainSectionContainer}>
         <View style={styles.workoutInfoCard}>
-          <Text style={styles.workoutInfoText}>{workoutInfoText}</Text>
+          <View style={styles.leftInfoContainer}>
+            <Text style={styles.workoutInfoText}>{workoutDurationText}</Text>
+            <Text style={styles.workoutInfoText}>{workoutVolumeText}</Text>
+            <Text style={styles.workoutInfoText}>{workoutDateText}</Text>
+          </View>
           {shouldRenderHealthSummary && healthData ? (
-            <Text style={styles.healthInfoText}>{buildHealthSummaryText(healthData)}</Text>
+            <View style={styles.rightHealthContainer}>
+              <Text style={styles.healthInfoText}>{buildHealthSummaryText(healthData)}</Text>
+            </View>
           ) : null}
         </View>
 
@@ -121,27 +127,43 @@ const styles = StyleSheet.create({
   },
   workoutInfoCard: {
     width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.md,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
+    gap: theme.spacing.sm
+  },
+  leftInfoContainer: {
+    flex: 1,
+    minWidth: 150,
+    alignItems: 'flex-start',
     gap: theme.spacing.xs
+  },
+  rightHealthContainer: {
+    flexShrink: 1,
+    minWidth: 120,
+    maxWidth: '48%',
+    alignItems: 'flex-end'
   },
   workoutInfoText: {
     color: theme.colors.textPrimary,
     fontSize: 13,
     fontWeight: '600',
     lineHeight: 19,
-    textAlign: 'center'
+    textAlign: 'left'
   },
   healthInfoText: {
     color: theme.colors.textSecondary,
     fontSize: 12,
     fontWeight: '500',
     lineHeight: 18,
-    textAlign: 'center'
+    textAlign: 'right'
   },
   postWorkoutPhotoContainer: {
     width: '74%',
