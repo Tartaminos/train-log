@@ -63,6 +63,8 @@ export default function WorkoutSessionScreen() {
   const [templateExerciseList, setTemplateExerciseList] = useState<TemplateExercise[]>([]);
   const [workoutSessionId, setWorkoutSessionId] = useState<number | null>(null);
   const [sessionStartedAt, setSessionStartedAt] = useState<string | null>(null);
+  const [sessionEndedAt, setSessionEndedAt] = useState<string | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const [exerciseSetMap, setExerciseSetMap] = useState<ExerciseSetMap>({});
   const [exerciseInputMap, setExerciseInputMap] = useState<ExerciseInputMap>({});
@@ -91,6 +93,21 @@ export default function WorkoutSessionScreen() {
         [exerciseId]: null
       }));
     }, 3000);
+  };
+
+  const formatElapsedTime = (totalElapsedSeconds: number) => {
+    const totalSafeElapsedSeconds = Math.max(0, totalElapsedSeconds);
+    const elapsedHours = Math.floor(totalSafeElapsedSeconds / 3600)
+      .toString()
+      .padStart(2, '0');
+    const elapsedMinutes = Math.floor((totalSafeElapsedSeconds % 3600) / 60)
+      .toString()
+      .padStart(2, '0');
+    const elapsedRemainingSeconds = Math.floor(totalSafeElapsedSeconds % 60)
+      .toString()
+      .padStart(2, '0');
+
+    return `${elapsedHours}:${elapsedMinutes}:${elapsedRemainingSeconds}`;
   };
 
   useEffect(() => {
@@ -139,6 +156,7 @@ export default function WorkoutSessionScreen() {
         setTemplateExerciseList(foundTemplateExercises);
         setWorkoutSessionId(workoutSession.id);
         setSessionStartedAt(workoutSession.startedAt);
+        setSessionEndedAt(workoutSession.endedAt ?? null);
         setExerciseSetMap(groupSetsByTemplateExercise(existingWorkoutSets));
         setExerciseInputMap(
           foundTemplateExercises.reduce<ExerciseInputMap>((currentInputMap, templateExercise) => {
@@ -179,6 +197,40 @@ export default function WorkoutSessionScreen() {
       });
     };
   }, [templateId]);
+
+  useEffect(() => {
+    if (!sessionStartedAt) {
+      setElapsedSeconds(0);
+      return;
+    }
+
+    const sessionStartedAtDate = new Date(sessionStartedAt);
+    if (Number.isNaN(sessionStartedAtDate.getTime())) {
+      setElapsedSeconds(0);
+      return;
+    }
+
+    if (sessionEndedAt) {
+      const sessionEndedAtDate = new Date(sessionEndedAt);
+      const endedElapsedSeconds = Math.floor(
+        (sessionEndedAtDate.getTime() - sessionStartedAtDate.getTime()) / 1000
+      );
+      setElapsedSeconds(Math.max(0, endedElapsedSeconds));
+      return;
+    }
+
+    const updateElapsedSeconds = () => {
+      const elapsedFromStart = Math.floor((Date.now() - sessionStartedAtDate.getTime()) / 1000);
+      setElapsedSeconds(Math.max(0, elapsedFromStart));
+    };
+
+    updateElapsedSeconds();
+    const timerInterval = setInterval(updateElapsedSeconds, 1000);
+
+    return () => {
+      clearInterval(timerInterval);
+    };
+  }, [sessionStartedAt, sessionEndedAt]);
 
   const handleExerciseInputChange = (
     exerciseId: number,
@@ -341,6 +393,8 @@ export default function WorkoutSessionScreen() {
         throw new Error('Workout session was not found during finish flow.');
       }
 
+      setSessionEndedAt(finishedWorkoutSession.endedAt ?? new Date().toISOString());
+
       router.replace(`/workout/${finishedWorkoutSession.id}/summary`);
     } catch (error) {
       console.error('Failed to finish workout session', error);
@@ -374,7 +428,11 @@ export default function WorkoutSessionScreen() {
   return (
     <Screen isScrollable contentContainerStyle={styles.contentContainer}>
       <Text style={styles.screenTitle}>{workoutTemplate.name}</Text>
-      <Text style={styles.secondaryText}>Início: {new Date(sessionStartedAt).toLocaleString()}</Text>
+      <View style={styles.sessionInfoRow}>
+        <Text style={styles.secondaryText}>Início: {new Date(sessionStartedAt).toLocaleString()}</Text>
+        <Text style={styles.secondaryText}>•</Text>
+        <Text style={styles.secondaryText}>Tempo: {formatElapsedTime(elapsedSeconds)}</Text>
+      </View>
 
       {orderedTemplateExerciseList.map((templateExercise) => {
         const currentExerciseInput = exerciseInputMap[templateExercise.id] ?? { load: '', reps: '' };
@@ -533,6 +591,12 @@ const styles = StyleSheet.create({
   secondaryText: {
     color: theme.colors.textSecondary,
     fontSize: 14
+  },
+  sessionInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    flexWrap: 'wrap'
   },
   exerciseCard: {
     backgroundColor: theme.colors.card,
