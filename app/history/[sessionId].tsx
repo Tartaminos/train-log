@@ -150,7 +150,7 @@ export default function WorkoutHistoryDetailScreen() {
     return (
       <Screen>
         <Text style={styles.notFoundText}>Sessão não encontrada.</Text>
-        <Pressable style={styles.backButton} onPress={() => router.push('/history')}>
+        <Pressable style={styles.backButton} onPress={() => router.replace('/history')}>
           <Text style={styles.backButtonText}>Voltar ao histórico</Text>
         </Pressable>
       </Screen>
@@ -201,7 +201,7 @@ export default function WorkoutHistoryDetailScreen() {
           ) : null}
         </View>
 
-        <Pressable style={styles.backButton} onPress={() => router.push('/history')}>
+        <Pressable style={styles.backButton} onPress={() => router.replace('/history')}>
           <Text style={styles.backButtonText}>Voltar ao histórico</Text>
         </Pressable>
       </ScrollView>

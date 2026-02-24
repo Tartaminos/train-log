@@ -64,6 +64,10 @@ export default function WorkoutHistoryScreen() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | 'all'>('all');
   const [workoutVolumePointList, setWorkoutVolumePointList] = useState<WorkoutVolumePoint[]>([]);
 
+  const handleBackToHomeScreen = useCallback(() => {
+    router.replace('/');
+  }, [router]);
+
   const loadWorkoutHistory = useCallback(async () => {
     try {
       setIsLoadingHistory(true);
@@ -223,7 +227,7 @@ export default function WorkoutHistoryScreen() {
   );
 
   return (
-    <Screen showBackButton title="Histórico">
+    <Screen showBackButton title="Histórico" onPressBack={handleBackToHomeScreen}>
       <Text style={styles.screenTitle}>Histórico de treinos</Text>
 
       <View style={styles.filterBarContainer}>

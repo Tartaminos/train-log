@@ -7,16 +7,23 @@ type AppHeaderProps = {
   title?: string;
   showEditButton?: boolean;
   onPressEdit?: () => void;
+  onPressBack?: () => void;
 };
 
 export function AppHeader({
   title,
   showEditButton = false,
-  onPressEdit
+  onPressEdit,
+  onPressBack
 }: AppHeaderProps) {
   const router = useRouter();
 
   const handleBack = () => {
+    if (onPressBack) {
+      onPressBack();
+      return;
+    }
+
     router.back();
   };
 
