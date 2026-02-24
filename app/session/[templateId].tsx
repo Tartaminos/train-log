@@ -1,20 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
-} from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import {
+  SessionExerciseRepositorySQLite,
   TemplateExerciseRepositorySQLite,
   WorkoutSessionRepositorySQLite,
   WorkoutSetRepositorySQLite,
   WorkoutTemplateRepositorySQLite
 } from '../../src/data/repositories/sqlite';
-import type { TemplateExercise, WorkoutSet, WorkoutTemplate } from '../../src/domain/entities';
+import type { SessionExercise, WorkoutSet, WorkoutTemplate } from '../../src/domain/entities';
 import { calculateExerciseVolumeTotal } from '../../src/domain/services/calculate-exercise-volume-total';
 import { Screen } from '../../src/ui/components/Layout';
 import { theme } from '../../src/ui/theme';
@@ -23,10 +18,18 @@ const workoutTemplateRepository = new WorkoutTemplateRepositorySQLite();
 const templateExerciseRepository = new TemplateExerciseRepositorySQLite();
 const workoutSessionRepository = new WorkoutSessionRepositorySQLite();
 const workoutSetRepository = new WorkoutSetRepositorySQLite();
+const sessionExerciseRepository = new SessionExerciseRepositorySQLite();
 
 type ExerciseInputState = {
   load: string;
   reps: string;
+};
+
+type NewExerciseFormState = {
+  name: string;
+  machine: string;
+  defaultLoad: string;
+  defaultReps: string;
 };
 
 type ExerciseSetMap = Record<number, WorkoutSet[]>;
@@ -35,17 +38,35 @@ type ExerciseLoadingMap = Record<number, boolean>;
 type ExerciseSuccessMessageMap = Record<number, string | null>;
 type ExerciseCompletionMap = Record<number, boolean>;
 
-function groupSetsByTemplateExercise(workoutSetList: WorkoutSet[]): ExerciseSetMap {
+function groupSetsBySessionExercise(workoutSetList: WorkoutSet[]): ExerciseSetMap {
   return workoutSetList.reduce<ExerciseSetMap>((currentMap, workoutSet) => {
-    if (!workoutSet.templateExerciseId) {
+    if (!workoutSet.sessionExerciseId) {
       return currentMap;
     }
 
-    const groupedSetList = currentMap[workoutSet.templateExerciseId] ?? [];
+    const groupedSetList = currentMap[workoutSet.sessionExerciseId] ?? [];
 
     return {
       ...currentMap,
-      [workoutSet.templateExerciseId]: [...groupedSetList, workoutSet]
+      [workoutSet.sessionExerciseId]: [...groupedSetList, workoutSet]
+    };
+  }, {});
+}
+
+function buildDefaultInputMap(sessionExerciseList: SessionExercise[]): ExerciseInputMap {
+  return sessionExerciseList.reduce<ExerciseInputMap>((currentInputMap, sessionExercise) => {
+    return {
+      ...currentInputMap,
+      [sessionExercise.id]: {
+        load:
+          sessionExercise.defaultLoad !== null && sessionExercise.defaultLoad !== undefined
+            ? String(sessionExercise.defaultLoad)
+            : '',
+        reps:
+          sessionExercise.defaultReps !== null && sessionExercise.defaultReps !== undefined
+            ? String(sessionExercise.defaultReps)
+            : ''
+      }
     };
   }, {});
 }
@@ -56,11 +77,14 @@ export default function WorkoutSessionScreen() {
 
   const [isInitializing, setIsInitializing] = useState(true);
   const [isFinishingWorkout, setIsFinishingWorkout] = useState(false);
+  const [isEditingExercises, setIsEditingExercises] = useState(false);
+  const [isSavingNewExercise, setIsSavingNewExercise] = useState(false);
 
   const [screenErrorMessage, setScreenErrorMessage] = useState<string | null>(null);
+  const [editModalErrorMessage, setEditModalErrorMessage] = useState<string | null>(null);
 
   const [workoutTemplate, setWorkoutTemplate] = useState<WorkoutTemplate | null>(null);
-  const [templateExerciseList, setTemplateExerciseList] = useState<TemplateExercise[]>([]);
+  const [sessionExerciseList, setSessionExerciseList] = useState<SessionExercise[]>([]);
   const [workoutSessionId, setWorkoutSessionId] = useState<number | null>(null);
   const [sessionStartedAt, setSessionStartedAt] = useState<string | null>(null);
   const [sessionEndedAt, setSessionEndedAt] = useState<string | null>(null);
@@ -72,6 +96,12 @@ export default function WorkoutSessionScreen() {
   const [exerciseSuccessMessageMap, setExerciseSuccessMessageMap] =
     useState<ExerciseSuccessMessageMap>({});
   const [exerciseCompletionMap, setExerciseCompletionMap] = useState<ExerciseCompletionMap>({});
+  const [newExerciseFormState, setNewExerciseFormState] = useState<NewExerciseFormState>({
+    name: '',
+    machine: '',
+    defaultLoad: '',
+    defaultReps: ''
+  });
 
   const successMessageTimeoutMapRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
@@ -146,6 +176,11 @@ export default function WorkoutSessionScreen() {
             startedAt: new Date().toISOString()
           }));
 
+        await sessionExerciseRepository.ensureExercisesForSession(workoutSession.id, foundTemplateExercises);
+
+        const persistedSessionExerciseList =
+          await sessionExerciseRepository.getExercisesBySessionId(workoutSession.id);
+
         const existingWorkoutSets = await workoutSetRepository.getSetsBySessionId(workoutSession.id);
 
         if (isCancelled) {
@@ -153,28 +188,12 @@ export default function WorkoutSessionScreen() {
         }
 
         setWorkoutTemplate(foundWorkoutTemplate);
-        setTemplateExerciseList(foundTemplateExercises);
+        setSessionExerciseList(persistedSessionExerciseList);
         setWorkoutSessionId(workoutSession.id);
         setSessionStartedAt(workoutSession.startedAt);
         setSessionEndedAt(workoutSession.endedAt ?? null);
-        setExerciseSetMap(groupSetsByTemplateExercise(existingWorkoutSets));
-        setExerciseInputMap(
-          foundTemplateExercises.reduce<ExerciseInputMap>((currentInputMap, templateExercise) => {
-            return {
-              ...currentInputMap,
-              [templateExercise.id]: {
-                load:
-                  templateExercise.defaultLoad !== null && templateExercise.defaultLoad !== undefined
-                    ? String(templateExercise.defaultLoad)
-                    : '',
-                reps:
-                  templateExercise.defaultReps !== null && templateExercise.defaultReps !== undefined
-                    ? String(templateExercise.defaultReps)
-                    : ''
-              }
-            };
-          }, {})
-        );
+        setExerciseSetMap(groupSetsBySessionExercise(existingWorkoutSets));
+        setExerciseInputMap(buildDefaultInputMap(persistedSessionExerciseList));
       } catch (error) {
         console.error('Failed to initialize workout session screen', error);
         if (!isCancelled) {
@@ -279,32 +298,31 @@ export default function WorkoutSessionScreen() {
     }
   };
 
+  const orderedSessionExerciseList = useMemo(() => {
+    const activeExerciseList: SessionExercise[] = [];
+    const completedExerciseList: SessionExercise[] = [];
 
-  const orderedTemplateExerciseList = useMemo(() => {
-    const activeExerciseList: TemplateExercise[] = [];
-    const completedExerciseList: TemplateExercise[] = [];
-
-    templateExerciseList.forEach((templateExercise) => {
-      if (exerciseCompletionMap[templateExercise.id]) {
-        completedExerciseList.push(templateExercise);
+    sessionExerciseList.forEach((sessionExercise) => {
+      if (exerciseCompletionMap[sessionExercise.id]) {
+        completedExerciseList.push(sessionExercise);
         return;
       }
 
-      activeExerciseList.push(templateExercise);
+      activeExerciseList.push(sessionExercise);
     });
 
     return [...activeExerciseList, ...completedExerciseList];
-  }, [templateExerciseList, exerciseCompletionMap]);
+  }, [sessionExerciseList, exerciseCompletionMap]);
 
-  const handleFinishExercise = (templateExerciseId: number) => {
+  const handleFinishExercise = (sessionExerciseId: number) => {
     setExerciseCompletionMap((currentCompletionMap) => ({
       ...currentCompletionMap,
-      [templateExerciseId]: true
+      [sessionExerciseId]: true
     }));
 
     setExerciseInputMap((currentInputMap) => ({
       ...currentInputMap,
-      [templateExerciseId]: {
+      [sessionExerciseId]: {
         load: '',
         reps: ''
       }
@@ -312,17 +330,17 @@ export default function WorkoutSessionScreen() {
 
     setExerciseSuccessMessageMap((currentSuccessMessageMap) => ({
       ...currentSuccessMessageMap,
-      [templateExerciseId]: null
+      [sessionExerciseId]: null
     }));
   };
 
-  const handleAddSet = async (templateExercise: TemplateExercise) => {
+  const handleAddSet = async (sessionExercise: SessionExercise) => {
     if (!workoutSessionId) {
       setScreenErrorMessage('Sessão de treino não encontrada.');
       return;
     }
 
-    const currentExerciseInput = exerciseInputMap[templateExercise.id] ?? { load: '', reps: '' };
+    const currentExerciseInput = exerciseInputMap[sessionExercise.id] ?? { load: '', reps: '' };
 
     const parsedLoad = Number(currentExerciseInput.load.replace(',', '.'));
     const parsedReps = Number.parseInt(currentExerciseInput.reps, 10);
@@ -336,16 +354,17 @@ export default function WorkoutSessionScreen() {
       setScreenErrorMessage(null);
       setExerciseLoadingMap((currentLoadingMap) => ({
         ...currentLoadingMap,
-        [templateExercise.id]: true
+        [sessionExercise.id]: true
       }));
 
-      const exerciseSetList = exerciseSetMap[templateExercise.id] ?? [];
+      const exerciseSetList = exerciseSetMap[sessionExercise.id] ?? [];
       const nextSetIndex = exerciseSetList.length + 1;
 
       await workoutSetRepository.createSet({
         workoutSessionId,
-        templateExerciseId: templateExercise.id,
-        exerciseName: templateExercise.name,
+        templateExerciseId: sessionExercise.templateExerciseId,
+        sessionExerciseId: sessionExercise.id,
+        exerciseName: sessionExercise.name,
         load: parsedLoad,
         reps: parsedReps,
         setIndex: nextSetIndex,
@@ -354,23 +373,118 @@ export default function WorkoutSessionScreen() {
 
       const updatedWorkoutSetList = await workoutSetRepository.getSetsBySessionId(workoutSessionId);
 
-      setExerciseSetMap(groupSetsByTemplateExercise(updatedWorkoutSetList));
+      setExerciseSetMap(groupSetsBySessionExercise(updatedWorkoutSetList));
       setExerciseInputMap((currentInputMap) => ({
         ...currentInputMap,
-        [templateExercise.id]: {
-          load: currentInputMap[templateExercise.id]?.load ?? '',
+        [sessionExercise.id]: {
+          load: currentInputMap[sessionExercise.id]?.load ?? '',
           reps: ''
         }
       }));
-      showExerciseSuccessMessage(templateExercise.id);
+      showExerciseSuccessMessage(sessionExercise.id);
     } catch (error) {
       console.error('Failed to add workout set', error);
       setScreenErrorMessage('Não foi possível adicionar a série.');
     } finally {
       setExerciseLoadingMap((currentLoadingMap) => ({
         ...currentLoadingMap,
-        [templateExercise.id]: false
+        [sessionExercise.id]: false
       }));
+    }
+  };
+
+  const handleRemoveSessionExercise = async (sessionExercise: SessionExercise) => {
+    const hasLoggedSets = (exerciseSetMap[sessionExercise.id] ?? []).length > 0;
+
+    if (hasLoggedSets) {
+      setEditModalErrorMessage('Não é possível remover exercício com séries registradas.');
+      return;
+    }
+
+    try {
+      setEditModalErrorMessage(null);
+      await sessionExerciseRepository.deleteSessionExercise(sessionExercise.id);
+
+      setSessionExerciseList((currentSessionExerciseList) =>
+        currentSessionExerciseList.filter((currentExercise) => currentExercise.id !== sessionExercise.id)
+      );
+
+      setExerciseInputMap((currentInputMap) => {
+        const { [sessionExercise.id]: _, ...remainingInputMap } = currentInputMap;
+        return remainingInputMap;
+      });
+    } catch (error) {
+      console.error('Failed to remove session exercise', error);
+      setEditModalErrorMessage('Não foi possível remover o exercício.');
+    }
+  };
+
+  const handleCreateSessionExercise = async () => {
+    if (!workoutSessionId) {
+      setEditModalErrorMessage('Sessão de treino não encontrada.');
+      return;
+    }
+
+    const trimmedExerciseName = newExerciseFormState.name.trim();
+
+    if (!trimmedExerciseName) {
+      setEditModalErrorMessage('Informe o nome do exercício.');
+      return;
+    }
+
+    const defaultLoadValue = newExerciseFormState.defaultLoad.trim();
+    const defaultRepsValue = newExerciseFormState.defaultReps.trim();
+
+    const parsedDefaultLoad = defaultLoadValue ? Number(defaultLoadValue.replace(',', '.')) : null;
+    const parsedDefaultReps = defaultRepsValue ? Number.parseInt(defaultRepsValue, 10) : null;
+
+    if (parsedDefaultLoad !== null && (!Number.isFinite(parsedDefaultLoad) || parsedDefaultLoad <= 0)) {
+      setEditModalErrorMessage('Carga padrão inválida.');
+      return;
+    }
+
+    if (parsedDefaultReps !== null && (!Number.isInteger(parsedDefaultReps) || parsedDefaultReps <= 0)) {
+      setEditModalErrorMessage('Reps padrão inválidas.');
+      return;
+    }
+
+    try {
+      setIsSavingNewExercise(true);
+      setEditModalErrorMessage(null);
+
+      const createdSessionExercise = await sessionExerciseRepository.createSessionExercise({
+        workoutSessionId,
+        name: trimmedExerciseName,
+        machine: newExerciseFormState.machine.trim() || null,
+        defaultLoad: parsedDefaultLoad,
+        defaultReps: parsedDefaultReps,
+        templateExerciseId: null
+      });
+
+      setSessionExerciseList((currentSessionExerciseList) => [
+        ...currentSessionExerciseList,
+        createdSessionExercise
+      ]);
+
+      setExerciseInputMap((currentInputMap) => ({
+        ...currentInputMap,
+        [createdSessionExercise.id]: {
+          load: createdSessionExercise.defaultLoad ? String(createdSessionExercise.defaultLoad) : '',
+          reps: createdSessionExercise.defaultReps ? String(createdSessionExercise.defaultReps) : ''
+        }
+      }));
+
+      setNewExerciseFormState({
+        name: '',
+        machine: '',
+        defaultLoad: '',
+        defaultReps: ''
+      });
+    } catch (error) {
+      console.error('Failed to add session exercise', error);
+      setEditModalErrorMessage('Não foi possível adicionar o exercício.');
+    } finally {
+      setIsSavingNewExercise(false);
     }
   };
 
@@ -427,30 +541,36 @@ export default function WorkoutSessionScreen() {
 
   return (
     <Screen isScrollable contentContainerStyle={styles.contentContainer}>
-      <Text style={styles.screenTitle}>{workoutTemplate.name}</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.screenTitle}>{workoutTemplate.name}</Text>
+        <Pressable style={styles.editExercisesButton} onPress={() => setIsEditingExercises(true)}>
+          <Text style={styles.editExercisesButtonText}>Editar exercícios</Text>
+        </Pressable>
+      </View>
+
       <View style={styles.sessionInfoRow}>
         <Text style={styles.secondaryText}>Início: {new Date(sessionStartedAt).toLocaleString()}</Text>
         <Text style={styles.secondaryText}>•</Text>
         <Text style={styles.secondaryText}>Tempo: {formatElapsedTime(elapsedSeconds)}</Text>
       </View>
 
-      {orderedTemplateExerciseList.map((templateExercise) => {
-        const currentExerciseInput = exerciseInputMap[templateExercise.id] ?? { load: '', reps: '' };
-        const currentExerciseSetList = exerciseSetMap[templateExercise.id] ?? [];
-        const isAddingSet = Boolean(exerciseLoadingMap[templateExercise.id]);
-        const isExerciseCompleted = Boolean(exerciseCompletionMap[templateExercise.id]);
+      {orderedSessionExerciseList.map((sessionExercise) => {
+        const currentExerciseInput = exerciseInputMap[sessionExercise.id] ?? { load: '', reps: '' };
+        const currentExerciseSetList = exerciseSetMap[sessionExercise.id] ?? [];
+        const isAddingSet = Boolean(exerciseLoadingMap[sessionExercise.id]);
+        const isExerciseCompleted = Boolean(exerciseCompletionMap[sessionExercise.id]);
         const exerciseVolumeTotal = calculateExerciseVolumeTotal(currentExerciseSetList);
 
         return (
           <View
-            key={templateExercise.id}
+            key={sessionExercise.id}
             style={[styles.exerciseCard, isExerciseCompleted && styles.completedExerciseCard]}
           >
             <View style={styles.exerciseHeaderRow}>
               <View style={styles.exerciseHeaderContent}>
-                <Text style={styles.exerciseName}>{templateExercise.name}</Text>
-                {templateExercise.machine ? (
-                  <Text style={styles.exerciseMachine}>{templateExercise.machine}</Text>
+                <Text style={styles.exerciseName}>{sessionExercise.name}</Text>
+                {sessionExercise.machine ? (
+                  <Text style={styles.exerciseMachine}>{sessionExercise.machine}</Text>
                 ) : null}
               </View>
 
@@ -492,7 +612,7 @@ export default function WorkoutSessionScreen() {
                         <TextInput
                           style={[styles.textInput, styles.inputWithUnitField]}
                           value={currentExerciseInput.load}
-                          onChangeText={(value) => handleExerciseInputChange(templateExercise.id, 'load', value)}
+                          onChangeText={(value) => handleExerciseInputChange(sessionExercise.id, 'load', value)}
                           placeholder="Carga"
                           placeholderTextColor={theme.colors.textSecondary}
                           keyboardType="numeric"
@@ -503,14 +623,13 @@ export default function WorkoutSessionScreen() {
                       <View style={styles.quickActionsContainer}>
                         <Pressable
                           style={styles.quickActionButton}
-                          onPress={() => handleLoadQuickIncrement(templateExercise.id, 2.5)}
+                          onPress={() => handleLoadQuickIncrement(sessionExercise.id, 2.5)}
                         >
-                          <Text style={styles.quickActionButtonText}>+2.5</Text>
+                          <Text style={styles.quickActionButtonText}>+2,5</Text>
                         </Pressable>
-
                         <Pressable
                           style={styles.quickActionButton}
-                          onPress={() => handleLoadQuickIncrement(templateExercise.id, 5)}
+                          onPress={() => handleLoadQuickIncrement(sessionExercise.id, 5)}
                         >
                           <Text style={styles.quickActionButtonText}>+5</Text>
                         </Pressable>
@@ -518,24 +637,21 @@ export default function WorkoutSessionScreen() {
                     </View>
 
                     <View style={styles.repsInputContainer}>
-                      <View style={styles.inputWithUnitContainer}>
-                        <TextInput
-                          style={[styles.textInput, styles.inputWithUnitField]}
-                          value={currentExerciseInput.reps}
-                          onChangeText={(value) => handleExerciseInputChange(templateExercise.id, 'reps', value)}
-                          placeholder="Reps"
-                          placeholderTextColor={theme.colors.textSecondary}
-                          keyboardType="numeric"
-                        />
-                        <Text style={styles.inputUnitLabel}>reps</Text>
-                      </View>
+                      <TextInput
+                        style={styles.textInput}
+                        value={currentExerciseInput.reps}
+                        onChangeText={(value) => handleExerciseInputChange(sessionExercise.id, 'reps', value)}
+                        placeholder="Reps"
+                        placeholderTextColor={theme.colors.textSecondary}
+                        keyboardType="numeric"
+                      />
                     </View>
                   </View>
 
                   <View style={styles.exerciseActionsRow}>
                     <Pressable
                       style={[styles.primaryButton, styles.exerciseActionButton, isAddingSet && styles.disabledButton]}
-                      onPress={() => handleAddSet(templateExercise)}
+                      onPress={() => handleAddSet(sessionExercise)}
                       disabled={isAddingSet}
                     >
                       <Text style={styles.primaryButtonText}>
@@ -545,14 +661,14 @@ export default function WorkoutSessionScreen() {
 
                     <Pressable
                       style={[styles.finishExerciseButton, styles.exerciseActionButton]}
-                      onPress={() => handleFinishExercise(templateExercise.id)}
+                      onPress={() => handleFinishExercise(sessionExercise.id)}
                     >
                       <Text style={styles.finishExerciseButtonText}>Finalizar exercício</Text>
                     </Pressable>
                   </View>
 
-                  {exerciseSuccessMessageMap[templateExercise.id] ? (
-                    <Text style={styles.successMessage}>{exerciseSuccessMessageMap[templateExercise.id]}</Text>
+                  {exerciseSuccessMessageMap[sessionExercise.id] ? (
+                    <Text style={styles.successMessage}>{exerciseSuccessMessageMap[sessionExercise.id]}</Text>
                   ) : null}
                 </View>
               </>
@@ -574,6 +690,96 @@ export default function WorkoutSessionScreen() {
           </Text>
         </Pressable>
       </View>
+
+      <Modal visible={isEditingExercises} animationType="slide" transparent onRequestClose={() => setIsEditingExercises(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Editar exercícios do treino</Text>
+              <Pressable onPress={() => setIsEditingExercises(false)}>
+                <Text style={styles.closeModalButtonText}>Fechar</Text>
+              </Pressable>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.modalContentContainer}>
+              <Text style={styles.sectionTitle}>Exercícios da sessão</Text>
+
+              {sessionExerciseList.map((sessionExercise) => (
+                <View key={sessionExercise.id} style={styles.modalExerciseRow}>
+                  <View style={styles.exerciseHeaderContent}>
+                    <Text style={styles.exerciseName}>{sessionExercise.name}</Text>
+                    {sessionExercise.machine ? (
+                      <Text style={styles.exerciseMachine}>{sessionExercise.machine}</Text>
+                    ) : null}
+                  </View>
+                  <Pressable
+                    style={styles.removeExerciseButton}
+                    onPress={() => handleRemoveSessionExercise(sessionExercise)}
+                  >
+                    <Text style={styles.removeExerciseButtonText}>Remover</Text>
+                  </Pressable>
+                </View>
+              ))}
+
+              <View style={styles.newExerciseCard}>
+                <Text style={styles.sectionTitle}>Adicionar exercício</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={newExerciseFormState.name}
+                  onChangeText={(value) =>
+                    setNewExerciseFormState((currentFormState) => ({ ...currentFormState, name: value }))
+                  }
+                  placeholder="Nome / Máquina"
+                  placeholderTextColor={theme.colors.textSecondary}
+                />
+                <TextInput
+                  style={styles.textInput}
+                  value={newExerciseFormState.machine}
+                  onChangeText={(value) =>
+                    setNewExerciseFormState((currentFormState) => ({ ...currentFormState, machine: value }))
+                  }
+                  placeholder="Máquina (opcional)"
+                  placeholderTextColor={theme.colors.textSecondary}
+                />
+                <View style={styles.setInputRow}>
+                  <TextInput
+                    style={[styles.textInput, styles.repsInputContainer]}
+                    value={newExerciseFormState.defaultLoad}
+                    onChangeText={(value) =>
+                      setNewExerciseFormState((currentFormState) => ({ ...currentFormState, defaultLoad: value }))
+                    }
+                    placeholder="Carga padrão"
+                    placeholderTextColor={theme.colors.textSecondary}
+                    keyboardType="numeric"
+                  />
+                  <TextInput
+                    style={[styles.textInput, styles.repsInputContainer]}
+                    value={newExerciseFormState.defaultReps}
+                    onChangeText={(value) =>
+                      setNewExerciseFormState((currentFormState) => ({ ...currentFormState, defaultReps: value }))
+                    }
+                    placeholder="Reps padrão"
+                    placeholderTextColor={theme.colors.textSecondary}
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <Pressable
+                  style={[styles.primaryButton, isSavingNewExercise && styles.disabledButton]}
+                  onPress={handleCreateSessionExercise}
+                  disabled={isSavingNewExercise}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {isSavingNewExercise ? 'Adicionando...' : 'Adicionar exercício'}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {editModalErrorMessage ? <Text style={styles.errorMessage}>{editModalErrorMessage}</Text> : null}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -583,10 +789,30 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
     paddingBottom: theme.spacing.xl
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: theme.spacing.sm
+  },
   screenTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: theme.colors.textPrimary
+    color: theme.colors.textPrimary,
+    flex: 1
+  },
+  editExercisesButton: {
+    borderRadius: theme.radius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs
+  },
+  editExercisesButtonText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '600'
   },
   secondaryText: {
     color: theme.colors.textSecondary,
@@ -777,5 +1003,70 @@ const styles = StyleSheet.create({
   successMessage: {
     color: theme.colors.textSecondary,
     fontSize: 13
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'flex-end'
+  },
+  modalContainer: {
+    maxHeight: '88%',
+    backgroundColor: theme.colors.background,
+    borderTopLeftRadius: theme.radius.lg,
+    borderTopRightRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: theme.spacing.md,
+    gap: theme.spacing.sm
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  modalTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '700'
+  },
+  closeModalButtonText: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '600'
+  },
+  modalContentContainer: {
+    gap: theme.spacing.md,
+    paddingBottom: theme.spacing.xl
+  },
+  modalExerciseRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    alignItems: 'center',
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md
+  },
+  removeExerciseButton: {
+    borderRadius: theme.radius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.error,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    backgroundColor: 'rgba(255, 92, 92, 0.08)'
+  },
+  removeExerciseButtonText: {
+    color: theme.colors.error,
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  newExerciseCard: {
+    backgroundColor: theme.colors.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    gap: theme.spacing.sm
   }
 });

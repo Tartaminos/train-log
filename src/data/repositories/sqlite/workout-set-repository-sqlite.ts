@@ -9,6 +9,7 @@ type WorkoutSetRow = {
   id: number;
   workout_session_id: number;
   template_exercise_id: number | null;
+  session_exercise_id: number | null;
   exercise_name: string;
   load: number;
   reps: number;
@@ -24,6 +25,7 @@ type ExercisePerformanceRow = {
   workout_set_id: number;
   workout_session_id: number;
   template_exercise_id: number | null;
+  session_exercise_id: number | null;
   exercise_name: string;
   load: number;
   reps: number;
@@ -56,6 +58,7 @@ function mapRow(row: WorkoutSetRow): WorkoutSet {
     id: row.id,
     workoutSessionId: row.workout_session_id,
     templateExerciseId: row.template_exercise_id,
+    sessionExerciseId: row.session_exercise_id,
     exerciseName: row.exercise_name,
     load: row.load,
     reps: row.reps,
@@ -97,11 +100,12 @@ export class WorkoutSetRepositorySQLite implements WorkoutSetRepository {
 
     const result = (await executeSql(
       `INSERT INTO workout_sets
-      (workout_session_id, template_exercise_id, exercise_name, load, reps, set_index, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      (workout_session_id, template_exercise_id, session_exercise_id, exercise_name, load, reps, set_index, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         input.workoutSessionId,
         input.templateExerciseId ?? null,
+        input.sessionExerciseId ?? null,
         input.exerciseName,
         input.load,
         input.reps,
@@ -111,7 +115,7 @@ export class WorkoutSetRepositorySQLite implements WorkoutSetRepository {
     )) as RunResult;
 
     const rows = (await executeSql(
-      `SELECT id, workout_session_id, template_exercise_id, exercise_name, load, reps, set_index, notes
+      `SELECT id, workout_session_id, template_exercise_id, session_exercise_id, exercise_name, load, reps, set_index, notes
       FROM workout_sets WHERE id = ?`,
       [result.lastInsertRowId]
     )) as WorkoutSetRow[];
@@ -127,7 +131,7 @@ export class WorkoutSetRepositorySQLite implements WorkoutSetRepository {
     await initDatabase();
 
     const rows = (await executeSql(
-      `SELECT id, workout_session_id, template_exercise_id, exercise_name, load, reps, set_index, notes
+      `SELECT id, workout_session_id, template_exercise_id, session_exercise_id, exercise_name, load, reps, set_index, notes
        FROM workout_sets
        WHERE workout_session_id = ?
        ORDER BY set_index ASC, id ASC`,
@@ -166,6 +170,7 @@ export class WorkoutSetRepositorySQLite implements WorkoutSetRepository {
          workout_sets.id AS workout_set_id,
          workout_sets.workout_session_id,
          workout_sets.template_exercise_id,
+         workout_sets.session_exercise_id,
          workout_sets.exercise_name,
          workout_sets.load,
          workout_sets.reps,
@@ -186,6 +191,7 @@ export class WorkoutSetRepositorySQLite implements WorkoutSetRepository {
         workoutSetId: exerciseHistoryRow.workout_set_id,
         workoutSessionId: exerciseHistoryRow.workout_session_id,
         templateExerciseId: exerciseHistoryRow.template_exercise_id,
+        sessionExerciseId: exerciseHistoryRow.session_exercise_id,
         exerciseName: exerciseHistoryRow.exercise_name,
         load: exerciseHistoryRow.load,
         reps: exerciseHistoryRow.reps,
@@ -238,6 +244,7 @@ export class WorkoutSetRepositorySQLite implements WorkoutSetRepository {
          workout_sets.id AS workout_set_id,
          workout_sets.workout_session_id,
          workout_sets.template_exercise_id,
+         workout_sets.session_exercise_id,
          workout_sets.exercise_name,
          workout_sets.load,
          workout_sets.reps,
@@ -256,6 +263,7 @@ export class WorkoutSetRepositorySQLite implements WorkoutSetRepository {
       workoutSetId: exerciseHistoryRow.workout_set_id,
       workoutSessionId: exerciseHistoryRow.workout_session_id,
       templateExerciseId: exerciseHistoryRow.template_exercise_id,
+      sessionExerciseId: exerciseHistoryRow.session_exercise_id,
       exerciseName: exerciseHistoryRow.exercise_name,
       load: exerciseHistoryRow.load,
       reps: exerciseHistoryRow.reps,
