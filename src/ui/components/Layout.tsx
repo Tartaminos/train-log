@@ -2,35 +2,57 @@ import type { PropsWithChildren } from 'react';
 import { ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppHeader } from './AppHeader';
 import { theme } from '../theme';
 
 type ScreenProps = PropsWithChildren<{
   style?: ViewStyle;
   isScrollable?: boolean;
   contentContainerStyle?: ViewStyle;
+  showBackButton?: boolean;
+  title?: string;
 }>;
 
 type CardProps = PropsWithChildren<{
   style?: ViewStyle;
 }>;
 
-export function Screen({ children, style, isScrollable = false, contentContainerStyle }: ScreenProps) {
+export function Screen({
+  children,
+  style,
+  isScrollable = false,
+  contentContainerStyle,
+  showBackButton = false,
+  title
+}: ScreenProps) {
   if (isScrollable) {
     return (
       <SafeAreaView edges={["top", "bottom"]} style={styles.safeAreaContainer}>
-        <ScrollView
-          style={[styles.scrollableScreen, style]}
-          contentContainerStyle={[styles.scrollableContentContainer, contentContainerStyle]}
-        >
-          {children}
-        </ScrollView>
+        <View style={styles.layoutContainer}>
+          {showBackButton ? <AppHeader title={title} /> : null}
+          <ScrollView
+            style={[styles.scrollableScreen, style]}
+            contentContainerStyle={[
+              styles.scrollableContentContainer,
+              showBackButton && styles.scrollableContentContainerWithHeader,
+              contentContainerStyle
+            ]}
+          >
+            {children}
+          </ScrollView>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.safeAreaContainer}>
-      <View style={[styles.screenContainer, style]}>{children}</View>
+      <View style={styles.layoutContainer}>
+        {showBackButton ? <AppHeader title={title} /> : null}
+        <View style={[styles.screenContainer, showBackButton && styles.screenContainerWithHeader, style]}>
+          {children}
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -44,12 +66,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background
   },
+  layoutContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background
+  },
   screenContainer: {
     flex: 1,
     backgroundColor: theme.colors.background,
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.lg,
     paddingBottom: theme.spacing.xl
+  },
+  screenContainerWithHeader: {
+    paddingTop: theme.spacing.md
   },
   scrollableScreen: {
     flex: 1,
@@ -59,6 +88,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.lg,
     paddingBottom: theme.spacing.xl
+  },
+  scrollableContentContainerWithHeader: {
+    paddingTop: theme.spacing.md
   },
   cardContainer: {
     backgroundColor: theme.colors.card,

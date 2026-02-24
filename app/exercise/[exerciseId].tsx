@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 
 import { WorkoutSetRepositorySQLite } from '../../src/data/repositories/sqlite';
 import type { ExercisePerformanceSummary } from '../../src/domain/repositories/workout-set-repository';
@@ -35,7 +35,6 @@ function formatVolume(volumeValue: number): string {
 }
 
 export default function ExercisePerformanceScreen() {
-  const router = useRouter();
   const { exerciseId } = useLocalSearchParams<{ exerciseId: string | string[] }>();
 
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
@@ -109,32 +108,23 @@ export default function ExercisePerformanceScreen() {
 
   if (loadingErrorMessage) {
     return (
-      <Screen>
+      <Screen showBackButton title="Exercício">
         <Text style={styles.notFoundText}>{loadingErrorMessage}</Text>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>Voltar</Text>
-        </Pressable>
       </Screen>
     );
   }
 
   if (!exercisePerformanceSummary) {
     return (
-      <Screen>
+      <Screen showBackButton title="Exercício">
         <Text style={styles.notFoundText}>Exercício não encontrado.</Text>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>Voltar</Text>
-        </Pressable>
       </Screen>
     );
   }
 
   return (
-    <Screen>
+    <Screen showBackButton title="Exercício">
       <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>Voltar</Text>
-        </Pressable>
 
         <View>
           <Text style={styles.exerciseName}>{exercisePerformanceSummary.exerciseName}</Text>
@@ -223,19 +213,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: theme.spacing.md
   },
-  backButton: {
-    alignSelf: 'flex-start',
-    backgroundColor: theme.colors.card,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: theme.spacing.md
-  },
-  backButtonText: {
-    color: theme.colors.textPrimary,
-    fontWeight: '600'
-  }
 });

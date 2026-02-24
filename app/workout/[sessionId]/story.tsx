@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
@@ -24,7 +24,6 @@ const healthDataService = new MockHealthDataService();
 export default function WorkoutStoryScreen() {
   const viewShotRef = useRef<ViewShot | null>(null);
   const { sessionId } = useLocalSearchParams<{ sessionId: string | string[] }>();
-  const router = useRouter();
   const safeAreaInsets = useSafeAreaInsets();
 
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
@@ -237,10 +236,6 @@ export default function WorkoutStoryScreen() {
     }
   }, [captureStoryImage, mediaLibraryAccessMessage, workoutSessionSummary]);
 
-  const handleBackToHome = useCallback(() => {
-    router.push('/');
-  }, [router]);
-
   const scrollContentContainerStyle = useMemo(
     () => ({
       ...styles.scrollContentContainer,
@@ -251,7 +246,7 @@ export default function WorkoutStoryScreen() {
 
   if (isLoadingSummary) {
     return (
-      <Screen>
+      <Screen showBackButton title="Story do treino">
         <Text style={styles.feedbackText}>Carregando dados do story...</Text>
       </Screen>
     );
@@ -259,14 +254,20 @@ export default function WorkoutStoryScreen() {
 
   if (!workoutSessionSummary) {
     return (
-      <Screen style={styles.centeredScreen}>
+      <Screen showBackButton title="Story do treino" style={styles.centeredScreen}>
         <Text style={styles.feedbackText}>Resumo da sessão não encontrado.</Text>
       </Screen>
     );
   }
 
   return (
-    <Screen isScrollable style={styles.screen} contentContainerStyle={scrollContentContainerStyle}>
+    <Screen
+      isScrollable
+      showBackButton
+      title="Story do treino"
+      style={styles.screen}
+      contentContainerStyle={scrollContentContainerStyle}
+    >
       <ViewShot
         ref={viewShotRef}
         style={styles.storyWrapper}
@@ -308,9 +309,6 @@ export default function WorkoutStoryScreen() {
 
       {storyActionFeedback ? <Text style={styles.storyActionFeedbackText}>{storyActionFeedback}</Text> : null}
 
-      <Pressable style={styles.tertiaryButton} onPress={handleBackToHome}>
-        <Text style={styles.tertiaryButtonText}>Voltar para início</Text>
-      </Pressable>
     </Screen>
   );
 }
@@ -347,16 +345,6 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.surface
   },
-  tertiaryButton: {
-    borderRadius: theme.radius.md,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background
-  },
   buttonDisabled: {
     opacity: 0.8
   },
@@ -369,11 +357,6 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontSize: 16,
     fontWeight: '700'
-  },
-  tertiaryButtonText: {
-    color: theme.colors.textSecondary,
-    fontSize: 15,
-    fontWeight: '600'
   },
   storyActionFeedbackText: {
     color: theme.colors.textSecondary,

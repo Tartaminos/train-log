@@ -223,11 +223,7 @@ export default function WorkoutHistoryScreen() {
   );
 
   return (
-    <Screen>
-      <Pressable style={styles.backButton} onPress={() => router.push('/')}>
-        <Text style={styles.backButtonText}>Voltar</Text>
-      </Pressable>
-
+    <Screen showBackButton title="Histórico">
       <Text style={styles.screenTitle}>Histórico de treinos</Text>
 
       <View style={styles.filterBarContainer}>
@@ -328,21 +324,6 @@ export default function WorkoutHistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  backButton: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.card,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 10,
-    marginBottom: theme.spacing.md
-  },
-  backButtonText: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '600'
-  },
   screenTitle: {
     fontSize: 28,
     fontWeight: '700',
