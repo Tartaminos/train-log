@@ -8,6 +8,7 @@ import type { WorkoutSessionSummary } from '../entities/workout-session-summary'
 
 export interface WorkoutSessionRepository {
   createSession(input: CreateWorkoutSessionInput): Promise<WorkoutSession>;
+  deleteWorkoutSession(sessionId: number): Promise<void>;
   finishSession(input: FinishWorkoutSessionInput): Promise<WorkoutSession | null>;
   getActiveSessionByTemplateId(workoutTemplateId: number): Promise<WorkoutSession | null>;
   getRecentSessions(limit?: number, workoutTemplateId?: number): Promise<WorkoutSession[]>;

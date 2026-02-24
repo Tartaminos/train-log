@@ -101,6 +101,13 @@ export class WorkoutSessionRepositorySQLite implements WorkoutSessionRepository 
     return this.getSessionById(input.id);
   }
 
+  async deleteWorkoutSession(sessionId: number): Promise<void> {
+    await initDatabase();
+
+    await executeSql('DELETE FROM workout_sets WHERE workout_session_id = ?', [sessionId]);
+    await executeSql('DELETE FROM workout_sessions WHERE id = ?', [sessionId]);
+  }
+
 
   async getActiveSessionByTemplateId(workoutTemplateId: number): Promise<WorkoutSession | null> {
     await initDatabase();

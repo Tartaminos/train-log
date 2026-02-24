@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import {
@@ -11,6 +11,7 @@ import type { WorkoutSession } from '../../src/domain/entities';
 import type { WorkoutTemplate } from '../../src/domain/entities/workout-template';
 import { Card, Screen } from '../../src/ui/components/Layout';
 import { WorkoutVolumeChart } from '../../src/ui/components/WorkoutVolumeChart';
+import { deleteWorkoutSession } from '../../src/domain/workouts/delete-workout-session';
 import { theme } from '../../src/ui/theme';
 
 type HistorySessionListItem = {
@@ -63,123 +64,100 @@ export default function WorkoutHistoryScreen() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | 'all'>('all');
   const [workoutVolumePointList, setWorkoutVolumePointList] = useState<WorkoutVolumePoint[]>([]);
 
-  useEffect(() => {
-    let isCancelled = false;
+  const loadWorkoutHistory = useCallback(async () => {
+    try {
+      setIsLoadingHistory(true);
+      const [workoutSessionList, workoutTemplateList] = await Promise.all([
+        workoutSessionRepository.getRecentSessions(50),
+        workoutTemplateRepository.getAllTemplates()
+      ]);
 
-    const loadWorkoutHistory = async () => {
-      try {
-        setIsLoadingHistory(true);
-        const [workoutSessionList, workoutTemplateList] = await Promise.all([
-          workoutSessionRepository.getRecentSessions(50),
-          workoutTemplateRepository.getAllTemplates()
-        ]);
+      const workoutTemplateMap = new Map<number, WorkoutTemplate>(
+        workoutTemplateList.map((workoutTemplate) => [workoutTemplate.id, workoutTemplate])
+      );
 
-        const workoutTemplateMap = new Map<number, WorkoutTemplate>(
-          workoutTemplateList.map((workoutTemplate) => [workoutTemplate.id, workoutTemplate])
-        );
+      const historyList = await Promise.all(
+        workoutSessionList.map(async (workoutSession: WorkoutSession) => {
+          const workoutTemplate = workoutSession.workoutTemplateId
+            ? workoutTemplateMap.get(workoutSession.workoutTemplateId) ?? null
+            : null;
+          const [totalVolume, workoutSetList] = await Promise.all([
+            workoutSetRepository.getTotalVolumeBySessionId(workoutSession.id),
+            workoutSetRepository.getSetsBySessionId(workoutSession.id)
+          ]);
 
-        const historyList = await Promise.all(
-          workoutSessionList.map(async (workoutSession: WorkoutSession) => {
-            const workoutTemplate = workoutSession.workoutTemplateId
-              ? workoutTemplateMap.get(workoutSession.workoutTemplateId) ?? null
-              : null;
-            const [totalVolume, workoutSetList] = await Promise.all([
-              workoutSetRepository.getTotalVolumeBySessionId(workoutSession.id),
-              workoutSetRepository.getSetsBySessionId(workoutSession.id)
-            ]);
+          return {
+            id: workoutSession.id,
+            workoutTemplateId: workoutSession.workoutTemplateId,
+            workoutTemplateName: workoutTemplate?.name ?? 'Treino sem nome',
+            startedAt: workoutSession.startedAt,
+            startedAtLabel: formatSessionDate(workoutSession.startedAt),
+            totalVolume,
+            totalVolumeLabel: `Volume: ${formatVolume(totalVolume)} kg`,
+            setCountLabel: `Séries: ${workoutSetList.length}`
+          };
+        })
+      );
 
-            return {
-              id: workoutSession.id,
-              workoutTemplateId: workoutSession.workoutTemplateId,
-              workoutTemplateName: workoutTemplate?.name ?? 'Treino sem nome',
-              startedAt: workoutSession.startedAt,
-              startedAtLabel: formatSessionDate(workoutSession.startedAt),
-              totalVolume,
-              totalVolumeLabel: `Volume: ${formatVolume(totalVolume)} kg`,
-              setCountLabel: `Séries: ${workoutSetList.length}`
-            };
-          })
-        );
+      historyList.sort(
+        (firstSession, secondSession) =>
+          new Date(secondSession.startedAt).getTime() - new Date(firstSession.startedAt).getTime()
+      );
 
-        historyList.sort(
-          (firstSession, secondSession) =>
-            new Date(secondSession.startedAt).getTime() - new Date(firstSession.startedAt).getTime()
-        );
+      const availableTemplateFilterOptions = workoutTemplateList.map((workoutTemplate) => ({
+        id: workoutTemplate.id,
+        name: workoutTemplate.name
+      }));
 
-        const availableTemplateFilterOptions = workoutTemplateList.map((workoutTemplate) => ({
-          id: workoutTemplate.id,
-          name: workoutTemplate.name
-        }));
-
-        if (!isCancelled) {
-          setHistorySessionList(historyList);
-          setTemplateFilterOptionList(availableTemplateFilterOptions);
-        }
-      } catch (error) {
-        console.error('Failed to load workout history', error);
-        if (!isCancelled) {
-          setHistorySessionList([]);
-          setTemplateFilterOptionList([]);
-        }
-      } finally {
-        if (!isCancelled) {
-          setIsLoadingHistory(false);
-        }
-      }
-    };
-
-    loadWorkoutHistory();
-
-    return () => {
-      isCancelled = true;
-    };
+      setHistorySessionList(historyList);
+      setTemplateFilterOptionList(availableTemplateFilterOptions);
+    } catch (error) {
+      console.error('Failed to load workout history', error);
+      setHistorySessionList([]);
+      setTemplateFilterOptionList([]);
+    } finally {
+      setIsLoadingHistory(false);
+    }
   }, []);
 
   useEffect(() => {
-    let isCancelled = false;
+    void loadWorkoutHistory();
+  }, [loadWorkoutHistory]);
 
-    const loadWorkoutVolumePointList = async () => {
-      if (selectedTemplateId === 'all') {
-        setWorkoutVolumePointList([]);
-        return;
-      }
+  const loadWorkoutVolumePointList = useCallback(async () => {
+    if (selectedTemplateId === 'all') {
+      setWorkoutVolumePointList([]);
+      return;
+    }
 
-      try {
-        const selectedTemplateSessionList = await workoutSessionRepository.getRecentSessions(50, selectedTemplateId);
+    try {
+      const selectedTemplateSessionList = await workoutSessionRepository.getRecentSessions(50, selectedTemplateId);
 
-        const chartPointList = await Promise.all(
-          selectedTemplateSessionList.map(async (selectedTemplateSession) => {
-            const totalSessionVolume = await workoutSetRepository.getTotalVolumeBySessionId(selectedTemplateSession.id);
+      const chartPointList = await Promise.all(
+        selectedTemplateSessionList.map(async (selectedTemplateSession) => {
+          const totalSessionVolume = await workoutSetRepository.getTotalVolumeBySessionId(selectedTemplateSession.id);
 
-            return {
-              date: selectedTemplateSession.startedAt,
-              totalVolume: totalSessionVolume
-            };
-          })
-        );
+          return {
+            date: selectedTemplateSession.startedAt,
+            totalVolume: totalSessionVolume
+          };
+        })
+      );
 
-        chartPointList.sort(
-          (firstPoint, secondPoint) => new Date(firstPoint.date).getTime() - new Date(secondPoint.date).getTime()
-        );
+      chartPointList.sort(
+        (firstPoint, secondPoint) => new Date(firstPoint.date).getTime() - new Date(secondPoint.date).getTime()
+      );
 
-        if (!isCancelled) {
-          setWorkoutVolumePointList(chartPointList);
-        }
-      } catch (error) {
-        console.error('Failed to load workout volume chart data', error);
-
-        if (!isCancelled) {
-          setWorkoutVolumePointList([]);
-        }
-      }
-    };
-
-    loadWorkoutVolumePointList();
-
-    return () => {
-      isCancelled = true;
-    };
+      setWorkoutVolumePointList(chartPointList);
+    } catch (error) {
+      console.error('Failed to load workout volume chart data', error);
+      setWorkoutVolumePointList([]);
+    }
   }, [selectedTemplateId]);
+
+  useEffect(() => {
+    void loadWorkoutVolumePointList();
+  }, [loadWorkoutVolumePointList]);
 
   const emptyStateText = useMemo(() => {
     if (isLoadingHistory) {
@@ -210,6 +188,39 @@ export default function WorkoutHistoryScreen() {
 
     return selectedTemplateOption?.name ?? 'Treino selecionado';
   }, [selectedTemplateId, templateFilterOptionList]);
+
+  const handleConfirmDeleteWorkoutSession = useCallback(
+    (sessionId: number) => {
+      Alert.alert('Deseja apagar este treino?', 'Esta ação não pode ser desfeita.', [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Apagar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteWorkoutSession(workoutSessionRepository, sessionId);
+              await loadWorkoutHistory();
+              await loadWorkoutVolumePointList();
+
+              if (selectedTemplateId !== 'all') {
+                const selectedTemplateSessionList = await workoutSessionRepository.getRecentSessions(
+                  50,
+                  selectedTemplateId
+                );
+
+                if (selectedTemplateSessionList.length === 0) {
+                  setSelectedTemplateId('all');
+                }
+              }
+            } catch (error) {
+              console.error('Failed to delete workout session', error);
+            }
+          }
+        }
+      ]);
+    },
+    [loadWorkoutHistory, loadWorkoutVolumePointList, selectedTemplateId]
+  );
 
   return (
     <Screen>
@@ -284,21 +295,31 @@ export default function WorkoutHistoryScreen() {
         ListEmptyComponent={<Text style={styles.emptyStateText}>{emptyStateText}</Text>}
         renderItem={({ item: historySession }) => (
           <Card>
-            <Pressable
-              onPress={() =>
-                router.push({
-                  pathname: '/history/[sessionId]',
-                  params: { sessionId: String(historySession.id) }
-                })
-              }
-            >
-              <Text style={styles.cardTitle}>{historySession.workoutTemplateName}</Text>
-              <Text style={styles.cardSubtitle}>{historySession.startedAtLabel}</Text>
-              <View style={styles.cardMetricsContainer}>
-                <Text style={styles.cardVolume}>{historySession.totalVolumeLabel}</Text>
-                <Text style={styles.cardVolume}>{historySession.setCountLabel}</Text>
-              </View>
-            </Pressable>
+            <View style={styles.cardContentContainer}>
+              <Pressable
+                style={styles.cardMainButton}
+                onPress={() =>
+                  router.push({
+                    pathname: '/history/[sessionId]',
+                    params: { sessionId: String(historySession.id) }
+                  })
+                }
+              >
+                <Text style={styles.cardTitle}>{historySession.workoutTemplateName}</Text>
+                <Text style={styles.cardSubtitle}>{historySession.startedAtLabel}</Text>
+                <View style={styles.cardMetricsContainer}>
+                  <Text style={styles.cardVolume}>{historySession.totalVolumeLabel}</Text>
+                  <Text style={styles.cardVolume}>{historySession.setCountLabel}</Text>
+                </View>
+              </Pressable>
+
+              <Pressable
+                style={styles.deleteButton}
+                onPress={() => handleConfirmDeleteWorkoutSession(historySession.id)}
+              >
+                <Text style={styles.deleteButtonLabel}>Apagar</Text>
+              </Pressable>
+            </View>
           </Card>
         )}
       />
@@ -397,5 +418,26 @@ const styles = StyleSheet.create({
   cardMetricsContainer: {
     marginTop: theme.spacing.sm,
     gap: theme.spacing.xs
+  },
+  cardContentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm
+  },
+  cardMainButton: {
+    flex: 1
+  },
+  deleteButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    backgroundColor: theme.colors.surface
+  },
+  deleteButtonLabel: {
+    color: '#ff6b6b',
+    fontSize: 13,
+    fontWeight: '700'
   }
 });
