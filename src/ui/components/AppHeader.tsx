@@ -5,9 +5,15 @@ import { theme } from '../theme';
 
 type AppHeaderProps = {
   title?: string;
+  showEditButton?: boolean;
+  onPressEdit?: () => void;
 };
 
-export function AppHeader({ title }: AppHeaderProps) {
+export function AppHeader({
+  title,
+  showEditButton = false,
+  onPressEdit
+}: AppHeaderProps) {
   const router = useRouter();
 
   const handleBack = () => {
@@ -25,7 +31,13 @@ export function AppHeader({ title }: AppHeaderProps) {
         {title ?? ''}
       </Text>
 
-      <View style={styles.rightSpacer} />
+      {showEditButton ? (
+        <Pressable style={styles.editButton} onPress={onPressEdit}>
+          <Text style={styles.editButtonText}>Editar</Text>
+        </Pressable>
+      ) : (
+        <View style={styles.rightSpacer} />
+      )}
     </View>
   );
 }
@@ -68,5 +80,14 @@ const styles = StyleSheet.create({
   },
   rightSpacer: {
     minWidth: 84
+  },
+  editButton: {
+    minWidth: 84,
+    alignItems: 'flex-end'
+  },
+  editButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600'
   }
 });
