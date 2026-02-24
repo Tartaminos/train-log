@@ -19,7 +19,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.example.trainlog"
+      "package": "com.jsfitsoftware.ironrecord"
     },
     "web": {
       "bundler": "metro",

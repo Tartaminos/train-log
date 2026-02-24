@@ -8,6 +8,11 @@
       "developmentClient": true,
       "distribution": "internal"
     },
+    "android-test": {
+      "android": {
+        "buildType": "app-bundle"
+      }
+    },
     "preview": {
       "distribution": "internal"
     },
