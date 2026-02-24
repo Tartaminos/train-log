@@ -119,12 +119,17 @@ export default function WorkoutSessionScreen() {
         const foundTemplateExercises =
           await templateExerciseRepository.getExercisesByTemplateId(parsedTemplateId);
 
-        const newWorkoutSession = await workoutSessionRepository.createSession({
-          workoutTemplateId: parsedTemplateId,
-          startedAt: new Date().toISOString()
-        });
+        const activeWorkoutSession =
+          await workoutSessionRepository.getActiveSessionByTemplateId(parsedTemplateId);
 
-        const existingWorkoutSets = await workoutSetRepository.getSetsBySessionId(newWorkoutSession.id);
+        const workoutSession =
+          activeWorkoutSession ??
+          (await workoutSessionRepository.createSession({
+            workoutTemplateId: parsedTemplateId,
+            startedAt: new Date().toISOString()
+          }));
+
+        const existingWorkoutSets = await workoutSetRepository.getSetsBySessionId(workoutSession.id);
 
         if (isCancelled) {
           return;
@@ -132,8 +137,8 @@ export default function WorkoutSessionScreen() {
 
         setWorkoutTemplate(foundWorkoutTemplate);
         setTemplateExerciseList(foundTemplateExercises);
-        setWorkoutSessionId(newWorkoutSession.id);
-        setSessionStartedAt(newWorkoutSession.startedAt);
+        setWorkoutSessionId(workoutSession.id);
+        setSessionStartedAt(workoutSession.startedAt);
         setExerciseSetMap(groupSetsByTemplateExercise(existingWorkoutSets));
         setExerciseInputMap(
           foundTemplateExercises.reduce<ExerciseInputMap>((currentInputMap, templateExercise) => {

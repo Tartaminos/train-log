@@ -101,6 +101,26 @@ export class WorkoutSessionRepositorySQLite implements WorkoutSessionRepository 
     return this.getSessionById(input.id);
   }
 
+
+  async getActiveSessionByTemplateId(workoutTemplateId: number): Promise<WorkoutSession | null> {
+    await initDatabase();
+
+    const rows = (await executeSql(
+      `SELECT id, workout_template_id, started_at, ended_at, notes
+       FROM workout_sessions
+       WHERE workout_template_id = ? AND ended_at IS NULL
+       ORDER BY datetime(started_at) DESC, id DESC
+       LIMIT 1`,
+      [workoutTemplateId]
+    )) as WorkoutSessionRow[];
+
+    if (rows.length === 0) {
+      return null;
+    }
+
+    return mapRow(rows[0]);
+  }
+
   async getRecentSessions(limit = 10, workoutTemplateId?: number): Promise<WorkoutSession[]> {
     await initDatabase();
 
