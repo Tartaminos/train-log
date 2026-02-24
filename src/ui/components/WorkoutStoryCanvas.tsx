@@ -54,8 +54,8 @@ export function WorkoutStoryCanvas({
   healthData,
   isHealthIntegrationEnabled = false
 }: WorkoutStoryCanvasProps) {
-  const workoutDurationText = `Duração: ${summary.durationInMinutes} min`;
-  const workoutVolumeText = `Volume: ${formatTotalVolume(summary.totalVolume)} kg`;
+  const workoutDurationValue = `${summary.durationInMinutes} min`;
+  const workoutVolumeValue = `${formatTotalVolume(summary.totalVolume)} kg`;
   const workoutDateText = `Data: ${formatWorkoutDate(summary.startedAt)}`;
   const shouldRenderHealthSummary = isHealthIntegrationEnabled && hasHealthData(healthData);
 
@@ -69,8 +69,14 @@ export function WorkoutStoryCanvas({
       <View style={styles.mainSectionContainer}>
         <View style={styles.workoutInfoCard}>
           <View style={styles.leftInfoContainer}>
-            <Text style={styles.workoutInfoText}>{workoutDurationText}</Text>
-            <Text style={styles.workoutInfoText}>{workoutVolumeText}</Text>
+            <View style={styles.workoutInfoRow}>
+              <Text style={styles.workoutInfoLabel}>Duração:</Text>
+              <Text style={styles.workoutInfoHighlightValue}>{workoutDurationValue}</Text>
+            </View>
+            <View style={styles.workoutInfoRow}>
+              <Text style={styles.workoutInfoLabel}>Volume:</Text>
+              <Text style={styles.workoutInfoHighlightValue}>{workoutVolumeValue}</Text>
+            </View>
             <Text style={styles.workoutInfoText}>{workoutDateText}</Text>
           </View>
           {shouldRenderHealthSummary && healthData ? (
@@ -151,10 +157,29 @@ const styles = StyleSheet.create({
     maxWidth: '48%',
     alignItems: 'flex-end'
   },
+  workoutInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs
+  },
+  workoutInfoLabel: {
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '400',
+    lineHeight: 19,
+    textAlign: 'left'
+  },
+  workoutInfoHighlightValue: {
+    color: theme.colors.primary,
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 19,
+    textAlign: 'left'
+  },
   workoutInfoText: {
     color: theme.colors.textPrimary,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '400',
     lineHeight: 19,
     textAlign: 'left'
   },
