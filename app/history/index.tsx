@@ -223,7 +223,7 @@ export default function WorkoutHistoryScreen() {
   );
 
   return (
-    <Screen showBackButton title="Histórico">
+    <Screen showBackButton title="Histórico" onBackPress={() => router.replace('/')}>
       <Text style={styles.screenTitle}>Histórico de treinos</Text>
 
       <View style={styles.filterBarContainer}>

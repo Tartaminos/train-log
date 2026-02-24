@@ -11,6 +11,7 @@ type ScreenProps = PropsWithChildren<{
   contentContainerStyle?: ViewStyle;
   showBackButton?: boolean;
   title?: string;
+  onBackPress?: () => void;
 }>;
 
 type CardProps = PropsWithChildren<{
@@ -23,13 +24,14 @@ export function Screen({
   isScrollable = false,
   contentContainerStyle,
   showBackButton = false,
-  title
+  title,
+  onBackPress
 }: ScreenProps) {
   if (isScrollable) {
     return (
       <SafeAreaView edges={["top", "bottom"]} style={styles.safeAreaContainer}>
         <View style={styles.layoutContainer}>
-          {showBackButton ? <AppHeader title={title} /> : null}
+          {showBackButton ? <AppHeader title={title} onBackPress={onBackPress} /> : null}
           <ScrollView
             style={[styles.scrollableScreen, style]}
             contentContainerStyle={[
@@ -48,7 +50,7 @@ export function Screen({
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.safeAreaContainer}>
       <View style={styles.layoutContainer}>
-        {showBackButton ? <AppHeader title={title} /> : null}
+        {showBackButton ? <AppHeader title={title} onBackPress={onBackPress} /> : null}
         <View style={[styles.screenContainer, showBackButton && styles.screenContainerWithHeader, style]}>
           {children}
         </View>

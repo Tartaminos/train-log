@@ -5,12 +5,18 @@ import { theme } from '../theme';
 
 type AppHeaderProps = {
   title?: string;
+  onBackPress?: () => void;
 };
 
-export function AppHeader({ title }: AppHeaderProps) {
+export function AppHeader({ title, onBackPress }: AppHeaderProps) {
   const router = useRouter();
 
   const handleBack = () => {
+    if (onBackPress) {
+      onBackPress();
+      return;
+    }
+
     router.back();
   };
 
