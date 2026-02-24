@@ -6,7 +6,7 @@ import { theme } from '../theme';
 
 type WorkoutStoryCanvasProps = {
   summary: WorkoutSessionSummary;
-  photoUri?: string;
+  photoUri?: string | null;
   healthData?: HealthWorkoutData | null;
   isHealthIntegrationEnabled?: boolean;
 };
