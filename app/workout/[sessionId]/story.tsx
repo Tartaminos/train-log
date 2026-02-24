@@ -114,12 +114,14 @@ export default function WorkoutStoryScreen() {
         return;
       }
 
-      const cameraResult = await ImagePicker.launchCameraAsync({
-        mediaTypes: ['images' satisfies ImagePicker.MediaType],
+      const storyPhotoPickerOptions: ImagePicker.ImagePickerOptions = {
+        mediaTypes: ['images'],
         quality: 1,
         allowsEditing: true,
         aspect: [9, 16]
-      });
+      };
+
+      const cameraResult = await ImagePicker.launchCameraAsync(storyPhotoPickerOptions);
 
       if (cameraResult.canceled) {
         return;
