@@ -16,6 +16,10 @@ type ForeignKeyRow = {
   match: string;
 };
 
+type TableInfoRow = {
+  name: string;
+};
+
 async function getDatabase() {
   return databasePromise;
 }
@@ -71,6 +75,7 @@ export async function initDatabase() {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             workout_session_id INTEGER NOT NULL,
             template_exercise_id INTEGER,
+            session_exercise_id INTEGER,
             exercise_name TEXT NOT NULL,
             load REAL NOT NULL,
             reps INTEGER NOT NULL,
@@ -78,8 +83,32 @@ export async function initDatabase() {
             notes TEXT,
             FOREIGN KEY(workout_session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE
           );
+
+          CREATE TABLE IF NOT EXISTS session_exercises (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            workout_session_id INTEGER NOT NULL,
+            template_exercise_id INTEGER,
+            name TEXT NOT NULL,
+            machine TEXT,
+            default_load REAL,
+            default_reps INTEGER,
+            sort_order INTEGER,
+            FOREIGN KEY(workout_session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE,
+            FOREIGN KEY(template_exercise_id) REFERENCES template_exercises(id) ON DELETE SET NULL
+          );
         `);
       });
+
+      const workoutSetTableInfo = (await db.getAllAsync('PRAGMA table_info(workout_sets)')) as TableInfoRow[];
+      const hasSessionExerciseColumn = workoutSetTableInfo.some(
+        (tableInfoRow) => tableInfoRow.name === 'session_exercise_id'
+      );
+
+      if (!hasSessionExerciseColumn) {
+        await db.execAsync(
+          'ALTER TABLE workout_sets ADD COLUMN session_exercise_id INTEGER'
+        );
+      }
 
       const workoutSessionForeignKeys = (await db.getAllAsync(
         'PRAGMA foreign_key_list(workout_sessions)'

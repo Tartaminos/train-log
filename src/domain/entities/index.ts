@@ -16,3 +16,5 @@ export type {
 } from './workout-session';
 export type { WorkoutSet, CreateWorkoutSetInput } from './workout-set';
 export type { WorkoutSessionSummary, PerExerciseVolumeSummary } from './workout-session-summary';
+
+export type { SessionExercise, CreateSessionExerciseInput } from './session-exercise';

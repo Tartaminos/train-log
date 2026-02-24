@@ -4,6 +4,7 @@ export type ExercisePerformanceHistoryItem = {
   workoutSetId: number;
   workoutSessionId: number;
   templateExerciseId: number | null;
+  sessionExerciseId: number | null;
   exerciseName: string;
   load: number;
   reps: number;

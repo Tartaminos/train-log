@@ -2,6 +2,7 @@ export type WorkoutSet = {
   id: number;
   workoutSessionId: number;
   templateExerciseId: number | null;
+  sessionExerciseId: number | null;
   exerciseName: string;
   load: number;
   reps: number;
@@ -12,6 +13,7 @@ export type WorkoutSet = {
 export type CreateWorkoutSetInput = {
   workoutSessionId: number;
   templateExerciseId?: number | null;
+  sessionExerciseId?: number | null;
   exerciseName: string;
   load: number;
   reps: number;
