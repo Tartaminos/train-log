@@ -289,7 +289,16 @@ export default function EditTemplateScreen() {
 
   return (
     <Screen isScrollable contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.screenTitle}>Editar treino</Text>
+        <View style={styles.headerContainer}>
+          <Text style={styles.screenTitle}>Editar treino</Text>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => router.push(`/template/${templateId}`)}
+          >
+            <Feather name="edit-2" size={14} color={theme.colors.textPrimary} />
+            <Text style={styles.editButtonText}>Editar</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Dados do treino</Text>
@@ -453,11 +462,34 @@ const styles = StyleSheet.create({
   contentContainer: {
     gap: theme.spacing.md
   },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.lg
+  },
   screenTitle: {
     fontSize: 28,
     fontWeight: '700',
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.lg
+    marginBottom: 0
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.card,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm
+  },
+  editButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600'
   },
   sectionContainer: {
     marginBottom: theme.spacing.lg
