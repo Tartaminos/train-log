@@ -65,6 +65,10 @@ export default function HomeScreen() {
     });
   };
 
+  const handleEditTemplate = (templateId: number) => {
+    router.push(`/template/${templateId}`);
+  };
+
   return (
     <Screen>
       <Text style={styles.screenTitle}>Meus Treinos</Text>
@@ -84,10 +88,23 @@ export default function HomeScreen() {
           ) : (
             templateList.map((template) => (
               <Card key={template.id}>
-                <TouchableOpacity onPress={() => handleOpenTemplate(template.id)} activeOpacity={0.9}>
-                  <Text style={styles.templateName}>{template.name}</Text>
-                  <Text style={styles.templateExerciseCount}>{template.exerciseCount} exercícios</Text>
-                </TouchableOpacity>
+                <View style={styles.templateHeaderRow}>
+                  <TouchableOpacity
+                    style={styles.templateInfoButton}
+                    onPress={() => handleOpenTemplate(template.id)}
+                    activeOpacity={0.9}
+                  >
+                    <Text style={styles.templateName}>{template.name}</Text>
+                    <Text style={styles.templateExerciseCount}>{template.exerciseCount} exercícios</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.editTemplateButton}
+                    onPress={() => handleEditTemplate(template.id)}
+                  >
+                    <Text style={styles.editTemplateButtonText}>Editar</Text>
+                  </TouchableOpacity>
+                </View>
 
                 <TouchableOpacity
                   style={styles.startWorkoutButton}
@@ -148,6 +165,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: theme.colors.textSecondary
   },
+  templateHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: theme.spacing.sm
+  },
+  templateInfoButton: {
+    flex: 1
+  },
   templateName: {
     fontSize: 18,
     fontWeight: '600',
@@ -158,6 +184,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.md
+  },
+  editTemplateButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.radius.sm,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm
+  },
+  editTemplateButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '600'
   },
   startWorkoutButton: {
     backgroundColor: theme.colors.primary,
