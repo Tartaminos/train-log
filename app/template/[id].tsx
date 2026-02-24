@@ -268,8 +268,7 @@ export default function EditTemplateScreen() {
 
   if (isLoadingTemplate) {
     return (
-      <Screen>
-        <Text style={styles.screenTitle}>Editar treino</Text>
+      <Screen showBackButton title="Editar treino">
         <Text style={styles.secondaryText}>Carregando...</Text>
       </Screen>
     );
@@ -277,8 +276,7 @@ export default function EditTemplateScreen() {
 
   if (templateNotFound || !templateId) {
     return (
-      <Screen>
-        <Text style={styles.screenTitle}>Editar treino</Text>
+      <Screen showBackButton title="Editar treino">
         <Text style={styles.errorMessage}>Treino não encontrado.</Text>
         <TouchableOpacity style={styles.primaryButton} onPress={() => router.replace('/')}>
           <Text style={styles.primaryButtonText}>Voltar para Home</Text>
@@ -288,17 +286,12 @@ export default function EditTemplateScreen() {
   }
 
   return (
-    <Screen isScrollable contentContainerStyle={styles.contentContainer}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.screenTitle}>Editar treino</Text>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => router.push(`/template/${templateId}`)}
-          >
-            <Feather name="edit-2" size={14} color={theme.colors.textPrimary} />
-            <Text style={styles.editButtonText}>Editar</Text>
-          </TouchableOpacity>
-        </View>
+    <Screen
+      isScrollable
+      showBackButton
+      title="Editar treino"
+      contentContainerStyle={styles.contentContainer}
+    >
 
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>Dados do treino</Text>
@@ -461,35 +454,6 @@ export default function EditTemplateScreen() {
 const styles = StyleSheet.create({
   contentContainer: {
     gap: theme.spacing.md
-  },
-  headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: theme.spacing.md,
-    marginBottom: theme.spacing.lg
-  },
-  screenTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-    marginBottom: 0
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    backgroundColor: theme.colors.card,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm
-  },
-  editButtonText: {
-    color: theme.colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '600'
   },
   sectionContainer: {
     marginBottom: theme.spacing.lg
