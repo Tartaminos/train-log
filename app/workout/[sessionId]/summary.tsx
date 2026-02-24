@@ -98,6 +98,15 @@ export default function WorkoutSessionSummaryScreen() {
     };
   }, [parsedSessionId]);
 
+  const handleGoBackWithoutStory = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace('/');
+  }, [router]);
+
   if (isLoadingSummary) {
     return (
       <Screen>
@@ -147,12 +156,18 @@ export default function WorkoutSessionSummaryScreen() {
         </Card>
       </View>
 
-      <Pressable
-        style={styles.primaryButton}
-        onPress={() => router.push(`/workout/${workoutSessionSummary.sessionId}/story`)}
-      >
-        <Text style={styles.primaryButtonText}>Gerar Story do treino</Text>
-      </Pressable>
+      <View style={styles.actionButtonsContainer}>
+        <Pressable
+          style={styles.primaryButton}
+          onPress={() => router.push(`/workout/${workoutSessionSummary.sessionId}/story`)}
+        >
+          <Text style={styles.primaryButtonText}>Gerar Story do treino</Text>
+        </Pressable>
+
+        <Pressable style={styles.secondaryButton} onPress={handleGoBackWithoutStory}>
+          <Text style={styles.secondaryButtonText}>Voltar sem gerar Story</Text>
+        </Pressable>
+      </View>
     </Screen>
   );
 }
@@ -180,6 +195,10 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     marginBottom: theme.spacing.lg
   },
+  actionButtonsContainer: {
+    marginTop: 'auto',
+    gap: theme.spacing.sm
+  },
   metricLabel: {
     color: theme.colors.textSecondary,
     fontSize: 14,
@@ -191,7 +210,6 @@ const styles = StyleSheet.create({
     fontWeight: '700'
   },
   primaryButton: {
-    marginTop: 'auto',
     backgroundColor: theme.colors.primary,
     borderRadius: theme.radius.md,
     minHeight: 52,
